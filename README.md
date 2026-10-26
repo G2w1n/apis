@@ -10,6 +10,9 @@ Sistema de **productos, pedidos y control de stock** construido **tres veces**, 
 | [`django/`](django/) | **Django 5 + Django REST Framework** | **PostgreSQL** (SQL) | 8000 |
 | [`rails/`](rails/) | **Ruby on Rails 8** (modo API) | **PostgreSQL** (SQL) | 3001 |
 
+Además, **[Voltec](frontend/)** es una tienda en **React** que consume cualquiera de las 3 APIs (se cambia en vivo):
+👉 **https://g2w1n-voltec.onrender.com**
+
 Una **única batería de 33 pruebas** ([`tests/contrato.test.js`](tests/contrato.test.js)) se ejecuta contra las tres
 y las tres la pasan. Así, la comparación entre frameworks se basa en código que hace exactamente lo mismo, no en opiniones.
 
@@ -205,7 +208,8 @@ El archivo [`render.yaml`](render.yaml) crea todo de una vez: las 3 APIs, el pan
 
 | Servicio | URL |
 |---|---|
-| Panel web | https://g2w1n-tienda-panel.onrender.com |
+| **Voltec (tienda en React)** | https://g2w1n-voltec.onrender.com |
+| Panel web de pruebas | https://g2w1n-tienda-panel.onrender.com |
 | Express + Firestore | https://g2w1n-tienda-express.onrender.com/api/v1/productos |
 | Django + PostgreSQL | https://g2w1n-tienda-django.onrender.com/api/v1/productos · admin: `/admin/` |
 | Rails + PostgreSQL | https://g2w1n-tienda-rails.onrender.com/api/v1/productos |
@@ -282,6 +286,7 @@ con `functions/serviceAccount.json` presente y **sin** la variable `FIRESTORE_EM
 
 ```
 apis/
+├── frontend/               Voltec: tienda en React + Vite + Tailwind
 ├── node-firebase/          Express + Firestore (Cloud Functions) y panel web (public/)
 ├── django/                 Django + DRF + PostgreSQL
 ├── rails/                  Rails 8 API + PostgreSQL

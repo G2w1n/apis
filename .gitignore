@@ -10,3 +10,4 @@ staticfiles/
 # Llaves de Firebase: nunca subirlas
 *firebase-adminsdk*.json
 serviceAccount*.json
+dist/
