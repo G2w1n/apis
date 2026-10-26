@@ -4,7 +4,8 @@ import { toast } from 'sonner';
 import { usePedidos } from '../api/consultas.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { mensajeError } from '../api/cliente.js';
-import { Cargando, ErrorCaja, EstadoChip, Vacio } from '../components/ui.jsx';
+import { ErrorCaja, EstadoChip, Vacio } from '../components/ui.jsx';
+import { FilasEsqueleto } from '../components/Esqueletos.jsx';
 import LineaEstado from '../components/LineaEstado.jsx';
 import { fecha, idCorto, soles } from '../utils/formato.js';
 
@@ -24,7 +25,7 @@ export default function MisPedidos() {
       <h1 className="font-display text-3xl font-bold">{esAdmin ? 'Todos los pedidos' : 'Mis pedidos'}</h1>
       <p className="mb-8 mt-1 text-slate-400">Sigue el estado de tus compras en tiempo real.</p>
 
-      {pedidos.isLoading ? <Cargando />
+      {pedidos.isLoading ? <FilasEsqueleto />
         : pedidos.isError ? <ErrorCaja error={pedidos.error} reintentar={pedidos.refetch} />
         : lista.length === 0 ? <Vacio titulo="Aún no tienes pedidos" texto="Cuando compres algo aparecerá aquí." accion={<Link to="/catalogo" className="btn-primario">Ir al catálogo</Link>} />
         : (

@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { LogIn, UserPlus, Zap } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { mensajeError } from '../api/cliente.js';
+import MedidorPassword, { passwordValida } from '../components/MedidorPassword.jsx';
 
 const DEMO = {
   admin: { email: 'admin@tienda.pe', password: 'Admin123*' },
@@ -21,6 +22,10 @@ export default function Login() {
 
   const entrar = async (datos = form) => {
     setError(null);
+    if (modo === 'registro' && datos === form && !passwordValida(form.password)) {
+      setError('La contraseña no cumple los requisitos de seguridad');
+      return;
+    }
     setEnviando(true);
     try {
       const usuario = modo === 'registro' && datos === form
@@ -54,6 +59,7 @@ export default function Login() {
           <div>
             <label className="etiqueta" htmlFor="password">Contraseña</label>
             <input id="password" type="password" className="campo" required minLength={modo === 'registro' ? 8 : 1} autoComplete={modo === 'login' ? 'current-password' : 'new-password'} {...campo('password')} />
+            {modo === 'registro' && <MedidorPassword password={form.password} />}
           </div>
           {error && <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">{error}</p>}
           <button className="btn-primario w-full py-3" disabled={enviando}>

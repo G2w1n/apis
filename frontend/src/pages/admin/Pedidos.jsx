@@ -4,7 +4,8 @@ import { toast } from 'sonner';
 import { usePedidos } from '../../api/consultas.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { mensajeError } from '../../api/cliente.js';
-import { Cargando, ErrorCaja, EstadoChip, Paginacion, Vacio } from '../../components/ui.jsx';
+import { ErrorCaja, EstadoChip, Paginacion, Vacio } from '../../components/ui.jsx';
+import { FilasEsqueleto } from '../../components/Esqueletos.jsx';
 import { ESTADOS, fecha, idCorto, soles } from '../../utils/formato.js';
 
 // Siguiente paso permitido por la máquina de estados de la API
@@ -36,7 +37,7 @@ export default function AdminPedidos() {
         ))}
       </div>
 
-      {pedidos.isLoading ? <Cargando /> : pedidos.isError ? <ErrorCaja error={pedidos.error} reintentar={pedidos.refetch} />
+      {pedidos.isLoading ? <FilasEsqueleto /> : pedidos.isError ? <ErrorCaja error={pedidos.error} reintentar={pedidos.refetch} />
         : pedidos.data.data.length === 0 ? <Vacio titulo="No hay pedidos con este estado" /> : (
           <div className="tarjeta overflow-x-auto">
             <table className="w-full min-w-[760px] text-sm">

@@ -18,6 +18,7 @@ Tienda de tecnología que consume la API del proyecto. Funciona con **cualquiera
 | `/admin/pedidos` | Avanzar estados y cancelar pedidos | admin |
 | `/admin/inventario` | Kardex, entradas/salidas y alertas de stock | admin |
 | `/admin/concurrencia` | Demo en vivo: N compras simultáneas contra un stock pequeño | admin |
+| `/admin/auditoria` | Quién cambió qué y cuándo (antes → después, IP) | admin |
 
 ## Ejecutar en tu PC
 ```bash
@@ -37,7 +38,18 @@ src/
 └── pages/               tienda y pages/admin (cargadas bajo demanda para que la tienda pese menos)
 ```
 
+## Seguridad en el navegador
+Render envía cabeceras definidas en `render.yaml`:
+- **Content-Security-Policy:** solo scripts propios; conexiones solo a las 3 APIs y a Google Fonts; sin iframes (`frame-ancestors 'none'`).
+- `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `Permissions-Policy` y HSTS.
+- Por eso el script del tema (`public/tema.js`) es un archivo y no código inline.
+
 ## Detalles que reflejan buenas prácticas
+- **Modo claro/oscuro** con variables CSS: las escalas de Tailwind se invierten en modo claro (300 ↔ 700), sin duplicar estilos.
+- **Skeletons** de carga en catálogo, detalle, pedidos y tablas del admin.
+- **PWA:** se puede instalar en el celular; la API nunca se guarda en caché (precios y stock siempre reales).
+- **Medidor de contraseña** con las mismas reglas que valida el servidor.
+- **Auditoría** en el admin: quién cambió qué, con antes → después.
 - **Idempotency-Key** en cada compra: un doble clic no crea dos pedidos.
 - **Code splitting:** la zona admin y la librería de gráficos solo se descargan al entrar como admin (la tienda pesa ~90 KB gzip).
 - **Aviso de "servidor despertando"** cuando la API de Render tarda más de 4 s (plan gratuito).

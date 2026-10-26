@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, LogOut, Menu, Package, ShoppingCart, User, X, Zap } from 'lucide-react';
+import { LayoutDashboard, LogOut, Menu, Moon, Package, ShoppingCart, Sun, User, X, Zap } from 'lucide-react';
+import { useTema } from '../context/TemaContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useCarrito } from '../context/CarritoContext.jsx';
 import SelectorApi from './SelectorApi.jsx';
@@ -11,6 +12,7 @@ export default function Navbar() {
   const { usuario, esAdmin, logout } = useAuth();
   const { cantidadTotal, setAbierto } = useCarrito();
   const [menu, setMenu] = useState(false);
+  const { tema, alternar } = useTema();
   const navegar = useNavigate();
 
   const enlaces = (
@@ -52,6 +54,10 @@ export default function Navbar() {
           ) : (
             <Link to="/login" className="btn-secundario hidden sm:inline-flex">Ingresar</Link>
           )}
+          <button className="rounded-xl border border-borde bg-white/5 p-2.5 hover:border-acento/60" onClick={alternar}
+            aria-label={tema === 'oscuro' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'} title={tema === 'oscuro' ? 'Modo claro' : 'Modo oscuro'}>
+            {tema === 'oscuro' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+          </button>
           <button className="relative rounded-xl border border-borde bg-white/5 p-2.5 hover:border-acento/60" onClick={() => setAbierto(true)} aria-label={`Carrito, ${cantidadTotal} productos`}>
             <ShoppingCart className="h-5 w-5" />
             {cantidadTotal > 0 && (

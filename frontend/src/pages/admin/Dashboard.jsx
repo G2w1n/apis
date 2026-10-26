@@ -3,10 +3,14 @@ import { AlertTriangle, Banknote, Boxes, PackageCheck } from 'lucide-react';
 import { useReporte } from '../../api/consultas.js';
 import { Cargando, ErrorCaja, Vacio } from '../../components/ui.jsx';
 import { ESTADOS, soles } from '../../utils/formato.js';
+import { useTema } from '../../context/TemaContext.jsx';
 
-// Gráficos de una sola serie: un solo color (sin leyenda; el título dice qué se mide)
-const COLOR_SERIE = '#22d3ee';
-const EJE = { stroke: '#94a3b8', fontSize: 12 };
+// Gráficos de una sola serie: un solo color (sin leyenda; el título dice qué se mide).
+// Recharts dibuja SVG con colores fijos, así que elegimos la paleta según el tema.
+const PALETA = {
+  oscuro: { serie: '#22d3ee', grilla: '#1f2937', eje: '#94a3b8', etiqueta: '#cbd5e1' },
+  claro: { serie: '#0891b2', grilla: '#e2e8f0', eje: '#64748b', etiqueta: '#334155' },
+};
 
 function Kpi({ icono: Icono, titulo, valor, detalle, alerta }) {
   return (
@@ -33,6 +37,8 @@ function Consejo({ active, payload, label, formato }) {
 
 export default function Dashboard() {
   const { data: r, isLoading, isError, error, refetch } = useReporte();
+  const c = PALETA[useTema().tema];
+  const EJE = { stroke: c.eje, fontSize: 12 };
   if (isLoading) return <Cargando />;
   if (isError) return <ErrorCaja error={error} reintentar={refetch} />;
 
@@ -56,11 +62,11 @@ export default function Dashboard() {
             <div className="mt-4 h-72">
               <ResponsiveContainer>
                 <BarChart data={vendidos} layout="vertical" margin={{ left: 8, right: 24 }} barCategoryGap={10}>
-                  <CartesianGrid horizontal={false} stroke="#1f2937" />
+                  <CartesianGrid horizontal={false} stroke={c.grilla} />
                   <XAxis type="number" allowDecimals={false} tick={EJE} axisLine={false} tickLine={false} />
-                  <YAxis type="category" dataKey="nombreCorto" width={170} tick={{ ...EJE, fill: '#cbd5e1' }} axisLine={false} tickLine={false} />
+                  <YAxis type="category" dataKey="nombreCorto" width={170} tick={{ ...EJE, fill: c.etiqueta }} axisLine={false} tickLine={false} />
                   <Tooltip cursor={{ fill: 'rgba(255,255,255,.04)' }} content={<Consejo formato={(v, d) => `${v} unidades · ${soles(d.ingresos)}`} />} />
-                  <Bar dataKey="unidades" isAnimationActive={false} fill={COLOR_SERIE} radius={[0, 4, 4, 0]} maxBarSize={22} />
+                  <Bar dataKey="unidades" isAnimationActive={false} fill={c.serie} radius={[0, 4, 4, 0]} maxBarSize={22} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -72,11 +78,11 @@ export default function Dashboard() {
           <div className="mt-4 h-72">
             <ResponsiveContainer>
               <BarChart data={estados} margin={{ top: 16, right: 8 }} barCategoryGap={14}>
-                <CartesianGrid vertical={false} stroke="#1f2937" />
+                <CartesianGrid vertical={false} stroke={c.grilla} />
                 <XAxis dataKey="estado" tick={EJE} axisLine={false} tickLine={false} />
                 <YAxis allowDecimals={false} tick={EJE} axisLine={false} tickLine={false} width={32} />
                 <Tooltip cursor={{ fill: 'rgba(255,255,255,.04)' }} content={<Consejo formato={(v) => `${v} pedido${v === 1 ? '' : 's'}`} />} />
-                <Bar dataKey="n" isAnimationActive={false} fill={COLOR_SERIE} radius={[4, 4, 0, 0]} maxBarSize={36} />
+                <Bar dataKey="n" isAnimationActive={false} fill={c.serie} radius={[4, 4, 0, 0]} maxBarSize={36} />
               </BarChart>
             </ResponsiveContainer>
           </div>

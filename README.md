@@ -13,7 +13,7 @@ Sistema de **productos, pedidos y control de stock** construido **tres veces**, 
 Además, **[Voltec](frontend/)** es una tienda en **React** que consume cualquiera de las 3 APIs (se cambia en vivo):
 👉 **https://g2w1n-voltec.onrender.com**
 
-Una **única batería de 33 pruebas** ([`tests/contrato.test.js`](tests/contrato.test.js)) se ejecuta contra las tres
+Una **única batería de 43 pruebas** ([`tests/contrato.test.js`](tests/contrato.test.js)) se ejecuta contra las tres
 y las tres la pasan. Así, la comparación entre frameworks se basa en código que hace exactamente lo mismo, no en opiniones.
 
 Trabajo de la asignatura *Desarrollo de Aplicaciones Web* — Unidad 3: Frameworks de desarrollo Frontend y Backend.
@@ -36,7 +36,14 @@ Trabajo de la asignatura *Desarrollo de Aplicaciones Web* — Unidad 3: Framewor
 | **Errores uniformes** | Todas las APIs responden `{ "error": { "codigo", "mensaje", "detalles" } }` con el mismo código HTTP. |
 | **Benchmark** | Mide lecturas y pedidos concurrentes en las tres APIs con la misma carga ([`docs/benchmark.md`](docs/benchmark.md)). |
 | **Panel web** | Frontend en Firebase Hosting que funciona con **cualquiera** de las 3 APIs, con una demo de concurrencia en vivo. |
-| **CI** | GitHub Actions ejecuta las 33 pruebas contra las 3 APIs en cada `push`. |
+| **CI** | GitHub Actions ejecuta las 43 pruebas contra las 3 APIs en cada `push` y compila el frontend. |
+| **Anti fuerza bruta** | 5 logins fallidos para un email desde la misma IP lo bloquean 15 min (`429` + `Retry-After`). Se guarda en la base de datos para que valga en todas las instancias. |
+| **Límite de peticiones** | Máximo `RATE_LIMIT_POR_MINUTO` (600 por defecto) peticiones por IP y minuto. |
+| **CORS restringido** | Solo Voltec, el panel, Firebase Hosting y `localhost` pueden llamar a la API desde un navegador. |
+| **Contraseñas fuertes** | Mayúscula, minúscula, número y símbolo; Voltec muestra un medidor en vivo. |
+| **Auditoría** | Cada cambio de producto, stock, estado de pedido y cada bloqueo de login queda registrado (quién, qué, antes/después, IP, cuándo) **en la misma transacción** que el cambio. `GET /auditoria`. |
+| **Swagger** | Documentación interactiva en `/docs` de cada API, generada desde un único [`shared/openapi.yaml`](shared/openapi.yaml). |
+| **Imágenes** | Campo `imagen_url` validado (solo `http(s)` o rutas `/...`, nunca `javascript:`). |
 
 ## Arquitectura
 
@@ -101,6 +108,8 @@ y el nombre de la categoría se **desnormaliza** dentro del producto. Así se ev
 | GET | `/stock/movimientos` | admin | Kardex (`producto_id`, `tipo`) |
 | GET | `/stock/alertas` | admin | Productos en o bajo su stock mínimo |
 | GET | `/stock/reporte` | admin | Valor del inventario, ingresos, pedidos por estado, más vendidos |
+| GET | `/auditoria` | admin | Registro de cambios (`entidad`, `entidad_id`, `accion`) |
+| GET | `/docs` (raíz) | público | Documentación Swagger interactiva |
 
 <details>
 <summary><b>Ejemplo: crear un pedido</b></summary>
@@ -140,7 +149,7 @@ Sin stock suficiente → `409 Conflict`
 </details>
 
 **Códigos de error:** `VALIDACION` (400), `JSON_INVALIDO` (400), `NO_AUTENTICADO` (401), `CREDENCIALES_INVALIDAS` (401),
-`PROHIBIDO` (403), `NO_ENCONTRADO` / `RUTA_NO_ENCONTRADA` (404), `EMAIL_EN_USO` / `SKU_DUPLICADO` / `CATEGORIA_DUPLICADA` /
+`PROHIBIDO` (403), `DEMASIADOS_INTENTOS` / `LIMITE_PETICIONES` (429), `NO_ENCONTRADO` / `RUTA_NO_ENCONTRADA` (404), `EMAIL_EN_USO` / `SKU_DUPLICADO` / `CATEGORIA_DUPLICADA` /
 `STOCK_INSUFICIENTE` / `CONFLICTO_CONCURRENCIA` (409), `PRODUCTO_NO_DISPONIBLE` / `TRANSICION_INVALIDA` / `CATEGORIA_INVALIDA` (422).
 
 **Usuarios de prueba** (los crea el seed, [`shared/seed.json`](shared/seed.json)):
@@ -192,6 +201,7 @@ bin/rails server -p 3001
 ```bash
 npm run test:express     # o test:django / test:rails  → 33 pruebas
 npm run benchmark        # compara las 3 APIs y actualiza docs/benchmark.md
+                         # (arranca las APIs con RATE_LIMIT_POR_MINUTO=100000 para que el límite no corte la medición)
 ```
 Para el panel, abre `node-firebase/public/index.html` (o `npm run emuladores` en `node-firebase/functions` y entra a http://localhost:5000),
 elige la API en el selector superior y entra como admin.

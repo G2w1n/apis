@@ -87,6 +87,27 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "22"
+    # Cabeceras de seguridad: el navegador solo ejecuta scripts propios, solo se conecta a nuestras APIs
+    # y nadie puede incrustar la tienda en un iframe (clickjacking)
+    headers:
+      - path: /*
+        name: Content-Security-Policy
+        value: "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://g2w1n-tienda-express.onrender.com https://g2w1n-tienda-django.onrender.com https://g2w1n-tienda-rails.onrender.com https://fonts.googleapis.com https://fonts.gstatic.com; manifest-src 'self'; worker-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+      - path: /*
+        name: Permissions-Policy
+        value: camera=(), microphone=(), geolocation=()
+      - path: /*
+        name: Strict-Transport-Security
+        value: max-age=31536000; includeSubDomains
     # React Router maneja las rutas en el navegador: cualquier URL (/catalogo, /admin...) sirve index.html
     routes:
       - type: rewrite

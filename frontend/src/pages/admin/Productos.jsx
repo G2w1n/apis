@@ -6,10 +6,11 @@ import { useCategorias, useProductos } from '../../api/consultas.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { mensajeError } from '../../api/cliente.js';
 import ArteProducto from '../../components/ArteProducto.jsx';
-import { Cargando, ErrorCaja, Modal, Paginacion, StockChip } from '../../components/ui.jsx';
+import { ErrorCaja, Modal, Paginacion, StockChip } from '../../components/ui.jsx';
+import { FilasEsqueleto } from '../../components/Esqueletos.jsx';
 import { soles } from '../../utils/formato.js';
 
-const VACIO = { sku: '', nombre: '', descripcion: '', precio: '', stock: '10', stock_minimo: '3', categoria_id: '' };
+const VACIO = { sku: '', nombre: '', descripcion: '', precio: '', stock: '10', stock_minimo: '3', categoria_id: '', imagen_url: '' };
 
 export default function AdminProductos() {
   const { api } = useAuth();
@@ -35,7 +36,7 @@ export default function AdminProductos() {
         <button className="btn-primario" onClick={() => setEditando({})}><Plus className="h-4 w-4" />Nuevo producto</button>
       </div>
 
-      {productos.isLoading ? <Cargando /> : productos.isError ? <ErrorCaja error={productos.error} reintentar={productos.refetch} /> : (
+      {productos.isLoading ? <FilasEsqueleto /> : productos.isError ? <ErrorCaja error={productos.error} reintentar={productos.refetch} /> : (
         <div className="tarjeta overflow-x-auto">
           <table className="w-full min-w-[720px] text-sm">
             <thead className="border-b border-borde text-left text-xs uppercase tracking-wide text-slate-500">
@@ -86,7 +87,7 @@ function FormularioProducto({ producto, alCerrar }) {
     setCargado(producto);
     setError(null);
     setForm(producto?.id
-      ? { ...VACIO, ...producto, precio: String(producto.precio), stock_minimo: String(producto.stock_minimo), categoria_id: producto.categoria?.id ?? '' }
+      ? { ...VACIO, ...producto, precio: String(producto.precio), stock_minimo: String(producto.stock_minimo), categoria_id: producto.categoria?.id ?? '', imagen_url: producto.imagen_url ?? '' }
       : VACIO);
   }
 
@@ -96,6 +97,7 @@ function FormularioProducto({ producto, alCerrar }) {
         sku: form.sku, nombre: form.nombre, descripcion: form.descripcion,
         precio: Number(form.precio), stock_minimo: Number(form.stock_minimo),
         categoria_id: form.categoria_id || null,
+        imagen_url: form.imagen_url.trim() || null,
         ...(esNuevo && { stock: Number(form.stock) }), // el stock de un producto existente solo cambia con movimientos
       };
       return esNuevo ? api('POST', '/productos', { body }) : api('PATCH', `/productos/${producto.id}`, { body });
@@ -122,6 +124,13 @@ function FormularioProducto({ producto, alCerrar }) {
             <option value="">Sin categoría</option>
             {(categorias.data?.data ?? []).map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
           </select>
+        </div>
+        <div className="col-span-2">
+          <label className="etiqueta" htmlFor="imagen">Imagen (URL o ruta /img/...)</label>
+          <div className="flex gap-3">
+            <input id="imagen" className="campo" placeholder="https://… o /img/productos/LAP-001.webp" {...campo('imagen_url')} />
+            {form.imagen_url && <img src={form.imagen_url} alt="" className="h-11 w-11 shrink-0 rounded-lg bg-white object-contain" />}
+          </div>
         </div>
         {error && <p className="col-span-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">{error}</p>}
         <div className="col-span-2 flex justify-end gap-2 pt-2">

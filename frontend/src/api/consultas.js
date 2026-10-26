@@ -28,4 +28,5 @@ export const useReporte = () => useConsulta(['reporte'], '/stock/reporte');
 export const useAlertas = () => useConsulta(['alertas'], '/stock/alertas');
 export const useMovimientos = (productoId) =>
   useConsulta(['movimientos', productoId], `/stock/movimientos${qs({ producto_id: productoId, limit: 50 })}`, { enabled: Boolean(productoId) });
+export const useAuditoria = (params) => useConsulta(['auditoria', params], `/auditoria${qs(params)}`, { placeholderData: (prev) => prev });
 export const useSalud = () => useConsulta(['salud'], '/health', { retry: 1, refetchInterval: 60_000 });

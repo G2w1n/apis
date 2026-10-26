@@ -2,7 +2,8 @@ import { Link } from 'react-router-dom';
 import { ArrowRight, Headphones, Laptop, ShieldCheck, Smartphone, Truck, Zap } from 'lucide-react';
 import { useCategorias, useProductos } from '../api/consultas.js';
 import TarjetaProducto from '../components/TarjetaProducto.jsx';
-import { Cargando, ErrorCaja } from '../components/ui.jsx';
+import { ErrorCaja } from '../components/ui.jsx';
+import { GrillaEsqueleto } from '../components/Esqueletos.jsx';
 
 const ICONOS = { Laptops: Laptop, Celulares: Smartphone, Accesorios: Headphones };
 
@@ -81,7 +82,7 @@ function Vitrina({ titulo, consulta, enlace = '/catalogo' }) {
         <h2 className="font-display text-2xl font-bold">{titulo}</h2>
         <Link to={enlace} className="text-sm font-medium text-acento hover:underline">Ver todo →</Link>
       </div>
-      {consulta.isLoading ? <Cargando /> : consulta.isError ? <ErrorCaja error={consulta.error} reintentar={consulta.refetch} /> : (
+      {consulta.isLoading ? <GrillaEsqueleto /> : consulta.isError ? <ErrorCaja error={consulta.error} reintentar={consulta.refetch} /> : (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {productos.map((p) => <TarjetaProducto key={p.id} producto={p} />)}
         </div>

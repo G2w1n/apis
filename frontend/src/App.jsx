@@ -13,6 +13,7 @@ import Login from './pages/Login.jsx';
 import MisPedidos from './pages/MisPedidos.jsx';
 import NoEncontrado from './pages/NoEncontrado.jsx';
 import { Cargando } from './components/ui.jsx';
+import { useTema } from './context/TemaContext.jsx';
 
 // La zona admin (y la librería de gráficos) se descarga solo cuando un administrador entra
 const AdminLayout = lazy(() => import('./pages/admin/AdminLayout.jsx'));
@@ -21,6 +22,7 @@ const AdminProductos = lazy(() => import('./pages/admin/Productos.jsx'));
 const AdminPedidos = lazy(() => import('./pages/admin/Pedidos.jsx'));
 const Inventario = lazy(() => import('./pages/admin/Inventario.jsx'));
 const Concurrencia = lazy(() => import('./pages/admin/Concurrencia.jsx'));
+const Auditoria = lazy(() => import('./pages/admin/Auditoria.jsx'));
 
 function Tienda() {
   const { pathname } = useLocation();
@@ -39,6 +41,7 @@ function Tienda() {
 }
 
 export default function App() {
+  const { tema } = useTema();
   return (
     <>
       <Routes>
@@ -54,11 +57,12 @@ export default function App() {
             <Route path="pedidos" element={<AdminPedidos />} />
             <Route path="inventario" element={<Inventario />} />
             <Route path="concurrencia" element={<Concurrencia />} />
+            <Route path="auditoria" element={<Auditoria />} />
           </Route>
           <Route path="*" element={<NoEncontrado />} />
         </Route>
       </Routes>
-      <Toaster theme="dark" position="bottom-right" richColors closeButton />
+      <Toaster theme={tema === 'oscuro' ? 'dark' : 'light'} position="bottom-right" richColors closeButton />
     </>
   );
 }

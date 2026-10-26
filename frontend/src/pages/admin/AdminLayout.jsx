@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom';
-import { Boxes, ClipboardList, LayoutDashboard, Package, Zap } from 'lucide-react';
+import { Boxes, ClipboardList, LayoutDashboard, Package, ShieldCheck, Zap } from 'lucide-react';
 
 const SECCIONES = [
   { a: '/admin', texto: 'Dashboard', icono: LayoutDashboard, fin: true },
@@ -7,6 +7,7 @@ const SECCIONES = [
   { a: '/admin/pedidos', texto: 'Pedidos', icono: ClipboardList },
   { a: '/admin/inventario', texto: 'Inventario', icono: Boxes },
   { a: '/admin/concurrencia', texto: 'Demo concurrencia', icono: Zap },
+  { a: '/admin/auditoria', texto: 'Auditoría', icono: ShieldCheck },
 ];
 
 export default function AdminLayout() {

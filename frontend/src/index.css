@@ -3,9 +3,10 @@
 @tailwind utilities;
 
 @layer base {
-  body { background-image: radial-gradient(60rem 30rem at 85% -10%, rgba(167,139,250,.12), transparent),
-                           radial-gradient(50rem 25rem at -10% 10%, rgba(34,211,238,.10), transparent); background-attachment: fixed; }
-  ::selection { background: rgba(34,211,238,.35); }
+  body { background-image: radial-gradient(60rem 30rem at 85% -10%, rgb(var(--c-violeta) / .12), transparent),
+                           radial-gradient(50rem 25rem at -10% 10%, rgb(var(--c-acento) / .10), transparent); background-attachment: fixed; }
+  ::selection { background: rgb(var(--c-acento) / .35); }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
 }
 
 @layer components {

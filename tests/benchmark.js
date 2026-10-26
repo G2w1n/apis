@@ -3,6 +3,7 @@
  *   node tests/benchmark.js                      (las 3, puertos por defecto)
  *   node tests/benchmark.js express=http://localhost:3000/api/v1
  * Genera docs/benchmark.md con la tabla de resultados.
+ * Arranca las APIs con RATE_LIMIT_POR_MINUTO=100000: el límite por IP cortaría la medición.
  */
 import { writeFile, mkdir } from 'node:fs/promises';
 

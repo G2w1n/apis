@@ -3,7 +3,8 @@ import { useSearchParams } from 'react-router-dom';
 import { Search, SlidersHorizontal } from 'lucide-react';
 import { useCategorias, useProductos } from '../api/consultas.js';
 import TarjetaProducto from '../components/TarjetaProducto.jsx';
-import { Cargando, ErrorCaja, Paginacion, Vacio } from '../components/ui.jsx';
+import { ErrorCaja, Paginacion, Vacio } from '../components/ui.jsx';
+import { GrillaEsqueleto } from '../components/Esqueletos.jsx';
 
 const ORDENES = [
   { valor: 'nombre', texto: 'Nombre A-Z' },
@@ -92,7 +93,7 @@ export default function Catalogo() {
             </select>
           </div>
 
-          {productos.isLoading ? <Cargando texto="Cargando productos…" />
+          {productos.isLoading ? <GrillaEsqueleto cantidad={6} className="sm:grid-cols-2 xl:grid-cols-3" />
             : productos.isError ? <ErrorCaja error={productos.error} reintentar={productos.refetch} />
             : lista.length === 0 ? <Vacio titulo="Sin resultados" texto="Prueba con otra búsqueda o limpia los filtros." />
             : (

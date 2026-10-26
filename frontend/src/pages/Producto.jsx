@@ -4,7 +4,8 @@ import { ArrowLeft, Check, Minus, Plus, ShieldCheck, ShoppingCart, Truck } from 
 import { useProducto } from '../api/consultas.js';
 import { useCarrito } from '../context/CarritoContext.jsx';
 import ArteProducto from '../components/ArteProducto.jsx';
-import { Cargando, ErrorCaja, StockChip } from '../components/ui.jsx';
+import { ErrorCaja, StockChip } from '../components/ui.jsx';
+import { DetalleEsqueleto } from '../components/Esqueletos.jsx';
 import { soles } from '../utils/formato.js';
 
 export default function Producto() {
@@ -13,7 +14,7 @@ export default function Producto() {
   const { agregar } = useCarrito();
   const [cantidad, setCantidad] = useState(1);
 
-  if (isLoading) return <Cargando />;
+  if (isLoading) return <DetalleEsqueleto />;
   if (isError) return <div className="pt-10"><ErrorCaja error={error} reintentar={refetch} /></div>;
 
   return (
