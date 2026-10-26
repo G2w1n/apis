@@ -6,3 +6,7 @@ __pycache__/
 *.log
 .DS_Store
 staticfiles/
+
+# Llaves de Firebase: nunca subirlas
+*firebase-adminsdk*.json
+serviceAccount*.json
