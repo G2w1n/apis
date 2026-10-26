@@ -1,9 +1,19 @@
-import { initializeApp, getApps } from 'firebase-admin/app';
+import { existsSync, readFileSync } from 'node:fs';
+import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { config } from './config.js';
 
-// Si existe FIRESTORE_EMULATOR_HOST el SDK se conecta solo al emulador local.
-if (!getApps().length) initializeApp({ projectId: config.proyectoId });
+// Credenciales:
+//  - Emulador (FIRESTORE_EMULATOR_HOST): no necesita ninguna.
+//  - Cloud Functions: las pone Google automáticamente.
+//  - Tu PC contra Firestore real: descarga la clave de la cuenta de servicio como functions/serviceAccount.json
+const claveLocal = new URL('../serviceAccount.json', import.meta.url);
+const opciones = { projectId: config.proyectoId };
+if (!process.env.FIRESTORE_EMULATOR_HOST && existsSync(claveLocal)) {
+  const clave = JSON.parse(readFileSync(claveLocal, 'utf8'));
+  Object.assign(opciones, { credential: cert(clave), projectId: clave.project_id });
+}
+if (!getApps().length) initializeApp(opciones);
 
 export const db = getFirestore();
 db.settings({ ignoreUndefinedProperties: true });

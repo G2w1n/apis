@@ -1,5 +1,6 @@
 {
   "projects": {
-    "default": "demo-tienda"
+    "default": "apip-e0b09",
+    "demo": "demo-tienda"
   }
 }

@@ -163,7 +163,7 @@ docker compose up -d          # PostgreSQL con las bases tienda_django y tienda_
 ```bash
 npm install -g firebase-tools
 cd node-firebase/functions && npm install
-firebase emulators:start --only firestore      # en otra terminal; consola visual en http://localhost:4000
+firebase emulators:start --only firestore --project demo-tienda   # en otra terminal; consola: http://localhost:4000
 export FIRESTORE_EMULATOR_HOST=127.0.0.1:8080
 npm run seed && npm start
 ```
@@ -190,19 +190,35 @@ bin/rails server -p 3001
 npm run test:express     # o test:django / test:rails  → 33 pruebas
 npm run benchmark        # compara las 3 APIs y actualiza docs/benchmark.md
 ```
-Para el panel, abre `node-firebase/public/index.html` (o `firebase emulators:start` y entra a http://localhost:5000),
+Para el panel, abre `node-firebase/public/index.html` (o `npm run emuladores` en `node-firebase/functions` y entra a http://localhost:5000),
 elige la API en el selector superior y entra como admin.
 
-### Desplegar en Firebase
-Requiere un proyecto de Firebase con el **plan Blaze** (Cloud Functions lo exige; un trabajo como este suele quedar dentro de la capa gratuita).
+### Desplegar en Firebase (proyecto `apip-e0b09`)
+El repositorio ya apunta al proyecto `apip-e0b09` (`node-firebase/.firebaserc`). Cloud Functions y Firestore usan la
+región **southamerica-east1** (São Paulo).
+
+**Con plan Blaze** (API + panel en la nube):
 ```bash
 cd node-firebase
 firebase login
-firebase use --add                 # elige tu proyecto
-cp functions/.env.example functions/.env   # pon un JWT_SECRET propio
+cp functions/.env.example functions/.env    # cambia JWT_SECRET por un texto largo y aleatorio
 firebase deploy --only functions,hosting,firestore
 ```
-Después la API queda en `https://<tu-proyecto>.web.app/api/v1` y el panel en `https://<tu-proyecto>.web.app`.
+- Panel: https://apip-e0b09.web.app
+- API: https://apip-e0b09.web.app/api/v1/health
+
+**Sin Blaze** (plan Spark: Firestore real + panel en Hosting; la API corre en tu PC):
+```bash
+cd node-firebase
+firebase login
+firebase deploy --only hosting,firestore
+# Consola de Firebase → ⚙️ Configuración → Cuentas de servicio → "Generar nueva clave privada"
+# guarda el archivo como node-firebase/functions/serviceAccount.json (está en .gitignore: NUNCA lo subas)
+cd functions && npm install && npm start    # API en http://localhost:3000/api/v1 usando tu Firestore real
+```
+
+**Cargar los datos de ejemplo en Firestore real** (borra lo que haya en esas colecciones):
+con `functions/serviceAccount.json` presente y **sin** la variable `FIRESTORE_EMULATOR_HOST`, ejecuta `npm run seed` en `node-firebase/functions`.
 
 ---
 

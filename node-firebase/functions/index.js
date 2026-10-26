@@ -2,4 +2,5 @@
 import { onRequest } from 'firebase-functions/v2/https';
 import { app } from './src/app.js';
 
-export const api = onRequest({ region: 'us-central1', memory: '256MiB', maxInstances: 10 }, app);
+// Misma región que Firestore (São Paulo) para evitar latencia entre continentes
+export const api = onRequest({ region: 'southamerica-east1', memory: '256MiB', maxInstances: 10 }, app);

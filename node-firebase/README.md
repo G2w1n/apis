@@ -24,14 +24,20 @@ firestore.rules           Acceso directo desde el navegador bloqueado: todo pasa
 ```bash
 npm install -g firebase-tools
 cd functions && npm install
-firebase emulators:start --only firestore        # consola visual: http://localhost:4000
+firebase emulators:start --only firestore --project demo-tienda   # consola: http://localhost:4000
 FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 npm run seed
 FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 npm start # http://localhost:3000/api/v1
 ```
 O la suite completa (Functions + Hosting + Firestore), igual que en producción:
 ```bash
-firebase emulators:start      # panel: http://localhost:5000 · API: http://localhost:5000/api/v1
+npm run emuladores      # dentro de functions/ · panel: http://localhost:5000 · API: http://localhost:5000/api/v1
 ```
+
+## Proyecto en la nube
+- Proyecto: **`apip-e0b09`** · región: **southamerica-east1** (São Paulo).
+- Los emuladores usan el proyecto ficticio `demo-tienda`, así nunca tocan tus datos reales.
+- Para usar Firestore real desde tu PC, guarda la clave de la cuenta de servicio como `functions/serviceAccount.json` (ignorada por git).
+- Despliegue y opción sin Blaze: ver el [README principal](../README.md#desplegar-en-firebase-proyecto-apip-e0b09).
 
 ## Decisiones de diseño en Firestore
 - **Sin `UNIQUE`:** se crean documentos "candado" (`_unicos/sku:LAP-001`, `_unicos/email:...`) dentro de la transacción; `create()` falla si ya existen.
