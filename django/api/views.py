@@ -50,6 +50,16 @@ def salud(request):
     return JsonResponse({'status': 'ok', 'framework': 'django', 'base_datos': 'postgresql'})
 
 
+def inicio(request):
+    """Página de bienvenida: quien abra la URL base ve qué API es y qué rutas tiene."""
+    return JsonResponse({
+        'api': 'Tienda API (productos, pedidos y stock)', 'framework': 'django', 'base_datos': 'postgresql', 'version': 'v1',
+        'rutas': ['/api/v1/health', '/api/v1/productos', '/api/v1/categorias', '/api/v1/auth/login', '/api/v1/pedidos',
+                  '/api/v1/stock/reporte', '/admin/'],
+        'repositorio': 'https://github.com/G2w1n/apis',
+    })
+
+
 def ruta_no_encontrada(request):
     return JsonResponse({'error': {'codigo': 'RUTA_NO_ENCONTRADA', 'mensaje': f'No existe {request.method} {request.path}'}},
                         status=404)

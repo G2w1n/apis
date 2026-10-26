@@ -1,4 +1,5 @@
 Rails.application.routes.draw do
+  root "salud#inicio"
   get "health", to: "salud#show"
 
   scope "api/v1", defaults: { format: :json } do

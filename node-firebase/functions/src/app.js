@@ -17,6 +17,13 @@ app.use(express.json({ limit: '100kb' }));
 const salud = (_req, res) => res.json({ status: 'ok', framework: 'express', base_datos: 'firestore' });
 app.get('/health', salud);
 
+// Página de bienvenida: quien abra la URL base ve qué API es y qué rutas tiene
+app.get('/', (_req, res) => res.json({
+  api: 'Tienda API (productos, pedidos y stock)', framework: 'express', base_datos: 'firestore', version: 'v1',
+  rutas: ['/api/v1/health', '/api/v1/productos', '/api/v1/categorias', '/api/v1/auth/login', '/api/v1/pedidos', '/api/v1/stock/reporte'],
+  repositorio: 'https://github.com/G2w1n/apis',
+}));
+
 const v1 = express.Router();
 v1.get('/health', salud);
 v1.use('/auth', authRoutes);
