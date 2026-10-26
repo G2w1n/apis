@@ -1,0 +1,22 @@
+{
+  "usuarios": [
+    { "nombre": "Administrador", "email": "admin@tienda.pe", "password": "Admin123*", "rol": "admin" },
+    { "nombre": "Cliente Demo", "email": "cliente@tienda.pe", "password": "Cliente123*", "rol": "cliente" }
+  ],
+  "categorias": [
+    { "nombre": "Laptops", "descripcion": "Computadoras portátiles" },
+    { "nombre": "Celulares", "descripcion": "Smartphones y equipos móviles" },
+    { "nombre": "Accesorios", "descripcion": "Periféricos y complementos" }
+  ],
+  "productos": [
+    { "sku": "LAP-001", "nombre": "Laptop Lenovo IdeaPad 5", "descripcion": "Ryzen 7, 16 GB RAM, 512 GB SSD", "precio": 3299.90, "stock": 12, "stock_minimo": 3, "categoria": "Laptops" },
+    { "sku": "LAP-002", "nombre": "MacBook Air M3", "descripcion": "13 pulgadas, 8 GB RAM, 256 GB SSD", "precio": 5499.00, "stock": 4, "stock_minimo": 5, "categoria": "Laptops" },
+    { "sku": "LAP-003", "nombre": "HP Victus Gaming", "descripcion": "Core i5, RTX 4050, 16 GB RAM", "precio": 4199.50, "stock": 7, "stock_minimo": 2, "categoria": "Laptops" },
+    { "sku": "CEL-001", "nombre": "Samsung Galaxy A55", "descripcion": "256 GB, 8 GB RAM", "precio": 1599.00, "stock": 25, "stock_minimo": 5, "categoria": "Celulares" },
+    { "sku": "CEL-002", "nombre": "iPhone 15", "descripcion": "128 GB", "precio": 3899.00, "stock": 2, "stock_minimo": 3, "categoria": "Celulares" },
+    { "sku": "CEL-003", "nombre": "Xiaomi Redmi Note 13", "descripcion": "256 GB, 8 GB RAM", "precio": 899.90, "stock": 40, "stock_minimo": 10, "categoria": "Celulares" },
+    { "sku": "ACC-001", "nombre": "Mouse Logitech MX Master 3S", "descripcion": "Inalámbrico, ergonómico", "precio": 449.00, "stock": 30, "stock_minimo": 8, "categoria": "Accesorios" },
+    { "sku": "ACC-002", "nombre": "Teclado mecánico Redragon", "descripcion": "Switches rojos, RGB", "precio": 189.90, "stock": 6, "stock_minimo": 6, "categoria": "Accesorios" },
+    { "sku": "ACC-003", "nombre": "Audífonos Sony WH-1000XM5", "descripcion": "Cancelación de ruido", "precio": 1349.00, "stock": 9, "stock_minimo": 3, "categoria": "Accesorios" }
+  ]
+}
