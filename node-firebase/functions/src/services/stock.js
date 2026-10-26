@@ -4,9 +4,10 @@ import { aCentimos, aSoles } from '../utils/dinero.js';
 import { leerPaginacion, paginar } from '../utils/paginacion.js';
 import { movimientoJSON, productoJSON } from '../utils/serializar.js';
 import { conCandado } from '../utils/candado.js';
+import * as auditoria from './auditoria.js';
 
 // Entrada (compra a proveedor) o salida manual (merma, robo, uso interno)
-export async function registrarMovimiento({ producto_id, tipo, cantidad, motivo }, usuarioId) {
+export async function registrarMovimiento({ producto_id, tipo, cantidad, motivo }, actor) {
   const productoRef = col.productos.doc(producto_id);
   const movRef = col.movimientos.doc();
   return conCandado([producto_id], () => db.runTransaction(async (tx) => {
@@ -22,10 +23,11 @@ export async function registrarMovimiento({ producto_id, tipo, cantidad, motivo 
     const ahora = new Date();
     const mov = {
       producto_id, producto_nombre: p.nombre, tipo, cantidad, stock_resultante: stockResultante,
-      motivo, usuario_id: usuarioId, created_at: ahora,
+      motivo, usuario_id: actor?.id ?? null, created_at: ahora,
     };
     tx.update(productoRef, { stock: stockResultante, updated_at: ahora });
     tx.create(movRef, mov);
+    auditoria.registrar(tx, actor, 'stock.movimiento', 'producto', producto_id, { tipo, cantidad, stock_resultante: stockResultante, motivo });
     return movimientoJSON(movRef.id, mov);
   }, { maxAttempts: 30 }));
 }

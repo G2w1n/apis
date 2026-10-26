@@ -56,6 +56,7 @@ class Producto(models.Model):
     stock_minimo = models.IntegerField(default=0)
     categoria = models.ForeignKey(Categoria, null=True, blank=True, on_delete=models.SET_NULL, related_name='productos')
     activo = models.BooleanField(default=True)
+    imagen_url = models.CharField(max_length=500, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -130,6 +131,29 @@ class HistorialEstado(models.Model):
 
     class Meta:
         ordering = ['fecha', 'id']
+
+
+class Auditoria(models.Model):
+    """Quién hizo qué y cuándo: cambios de precio, stock, estados de pedidos y bloqueos de login."""
+    accion = models.CharField(max_length=40)
+    entidad = models.CharField(max_length=20)
+    entidad_id = models.CharField(max_length=120)
+    usuario = models.ForeignKey(Usuario, null=True, blank=True, on_delete=models.SET_NULL)
+    ip = models.GenericIPAddressField(null=True, blank=True)
+    detalle = models.JSONField(default=dict)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at', '-id']
+        indexes = [models.Index(fields=['entidad', 'entidad_id'])]
+
+
+class IntentoLogin(models.Model):
+    """Fallos de login por IP + email (en la base de datos para que lo compartan todos los workers)."""
+    clave = models.CharField(max_length=64, unique=True)
+    fallos = models.PositiveIntegerField(default=0)
+    primer_fallo = models.DateTimeField()
+    bloqueado_hasta = models.DateTimeField(null=True, blank=True)
 
 
 class MovimientoStock(models.Model):

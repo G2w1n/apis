@@ -2,6 +2,7 @@ import { db, col } from '../firebase.js';
 import { AppError, noEncontrado } from '../utils/AppError.js';
 import { leerPaginacion, paginar } from '../utils/paginacion.js';
 import { productoJSON } from '../utils/serializar.js';
+import * as auditoria from './auditoria.js';
 
 const ORDENES = { nombre: 'nombre', precio: 'precio', stock: 'stock', creado: 'created_at' };
 
@@ -42,7 +43,7 @@ async function leerCategoria(tx, categoriaId) {
   return { categoria_id: cat.id, categoria_nombre: cat.data().nombre };
 }
 
-export async function crear(datos, usuarioId) {
+export async function crear(datos, actor) {
   const ref = col.productos.doc();
   const ahora = new Date();
   const { categoria_id, ...resto } = datos;
@@ -54,11 +55,12 @@ export async function crear(datos, usuarioId) {
       producto = { ...resto, ...categoria, activo: true, created_at: ahora, updated_at: ahora };
       tx.create(col.unicos.doc(`sku:${resto.sku}`), { producto_id: ref.id });
       tx.create(ref, producto);
+      auditoria.registrar(tx, actor, 'producto.crear', 'producto', ref.id, { sku: producto.sku, nombre: producto.nombre, precio: producto.precio, stock: producto.stock });
       if (producto.stock > 0) {
         tx.create(col.movimientos.doc(), {
           producto_id: ref.id, producto_nombre: producto.nombre, tipo: 'entrada',
           cantidad: producto.stock, stock_resultante: producto.stock, motivo: 'Stock inicial',
-          usuario_id: usuarioId, created_at: ahora,
+          usuario_id: actor?.id ?? null, created_at: ahora,
         });
       }
     });
@@ -69,7 +71,7 @@ export async function crear(datos, usuarioId) {
   return productoJSON(ref.id, producto);
 }
 
-export async function actualizar(id, cambios) {
+export async function actualizar(id, cambios, actor) {
   const ref = col.productos.doc(id);
   let resultado;
   try {
@@ -86,6 +88,8 @@ export async function actualizar(id, cambios) {
       }
       const datos = { ...resto, ...extra, updated_at: new Date() };
       tx.update(ref, datos);
+      const cambiado = auditoria.diferencias(actual, datos);
+      if (Object.keys(cambiado).length) auditoria.registrar(tx, actor, 'producto.actualizar', 'producto', id, { cambios: cambiado });
       resultado = { ...actual, ...datos };
     });
   } catch (e) {
@@ -96,11 +100,12 @@ export async function actualizar(id, cambios) {
 }
 
 // Borrado lógico: el producto desaparece del catálogo pero los pedidos y el kardex conservan su historia
-export async function eliminar(id) {
+export async function eliminar(id, actor) {
   const ref = col.productos.doc(id);
   await db.runTransaction(async (tx) => {
     const doc = await tx.get(ref);
     if (!doc.exists || !doc.data().activo) throw noEncontrado('Producto');
     tx.update(ref, { activo: false, updated_at: new Date() });
+    auditoria.registrar(tx, actor, 'producto.eliminar', 'producto', id, { sku: doc.data().sku, nombre: doc.data().nombre });
   });
 }

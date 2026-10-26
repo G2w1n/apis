@@ -17,4 +17,5 @@ urlpatterns = [
     path('stock/movimientos', views.movimientos),
     path('stock/alertas', views.alertas),
     path('stock/reporte', views.reporte),
+    path('auditoria', views.auditoria),
 ]

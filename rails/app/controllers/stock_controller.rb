@@ -4,7 +4,7 @@ class StockController < ApplicationController
   def registrar
     datos = Validador.new(cuerpo).id(:producto_id).opcion(:tipo, MovimientoStock::TIPOS)
                      .entero(:cantidad, min: 1, max: 100_000).texto(:motivo, max: 200).resultado!
-    render json: StockService.registrar(datos, usuario_actual), status: :created
+    render json: StockService.registrar(datos, usuario_actual, request.remote_ip), status: :created
   end
 
   # Kardex: del más reciente al más antiguo

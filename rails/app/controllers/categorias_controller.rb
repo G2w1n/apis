@@ -8,6 +8,11 @@ class CategoriasController < ApplicationController
     if Categoria.where("lower(nombre) = ?", datos[:nombre].downcase).exists?
       raise ErrorNegocio.new(409, "CATEGORIA_DUPLICADA", "Ya existe una categoría con ese nombre")
     end
-    render json: Categoria.create!(datos), status: :created
+    categoria = ActiveRecord::Base.transaction do
+      Categoria.create!(datos).tap do |c|
+        AuditoriaService.registrar(usuario_actual, request.remote_ip, "categoria.crear", "categoria", c.id, { nombre: c.nombre })
+      end
+    end
+    render json: categoria, status: :created
   end
 end

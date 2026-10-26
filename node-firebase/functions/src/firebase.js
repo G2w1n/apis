@@ -64,4 +64,6 @@ export const col = {
   // cuyo ID es el valor único (ej. "sku:LAP-001"). tx.create() falla si ya existe.
   unicos: db.collection('_unicos'),
   idempotencia: db.collection('_idempotencia'),
+  auditoria: db.collection('auditoria'),
+  intentosLogin: db.collection('_intentos_login'),
 };

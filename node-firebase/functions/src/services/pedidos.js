@@ -5,6 +5,7 @@ import { aCentimos, aSoles } from '../utils/dinero.js';
 import { leerPaginacion, paginar } from '../utils/paginacion.js';
 import { pedidoJSON } from '../utils/serializar.js';
 import { conCandado } from '../utils/candado.js';
+import * as auditoria from './auditoria.js';
 
 // Máquina de estados: qué transiciones están permitidas desde cada estado
 export const TRANSICIONES = {
@@ -154,6 +155,7 @@ export async function cancelar(id, usuario) {
     });
     const historial = [...pedido.historial, { estado: 'cancelado', fecha: ahora }];
     tx.update(ref, { estado: 'cancelado', historial });
+    auditoria.registrar(tx, usuario, 'pedido.cancelar', 'pedido', id, { de: pedido.estado, a: 'cancelado' });
     return pedidoJSON(id, { ...pedido, estado: 'cancelado', historial });
   }, OPCIONES_TX));
 }
@@ -168,6 +170,7 @@ export async function cambiarEstado(id, estado, usuario) {
     validarTransicion(pedido.estado, estado);
     const historial = [...pedido.historial, { estado, fecha: new Date() }];
     tx.update(ref, { estado, historial });
+    auditoria.registrar(tx, usuario, 'pedido.estado', 'pedido', id, { de: pedido.estado, a: estado });
     return pedidoJSON(id, { ...pedido, estado, historial });
   });
 }

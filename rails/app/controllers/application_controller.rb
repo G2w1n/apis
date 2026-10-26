@@ -1,6 +1,7 @@
 class ApplicationController < ActionController::API
   # Todas las respuestas de error tienen la forma { error: { codigo, mensaje, detalles? } }
   rescue_from ErrorNegocio do |e|
+    e.cabeceras&.each { |nombre, valor| response.set_header(nombre, valor) }
     error = { codigo: e.codigo, mensaje: e.message }
     error[:detalles] = e.detalles if e.detalles
     render json: { error: }, status: e.status

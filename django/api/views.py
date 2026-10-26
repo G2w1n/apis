@@ -1,5 +1,9 @@
+from pathlib import Path
+
+from django.conf import settings
+from django.db import transaction
 from django.db.models import F, Q
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -7,9 +11,10 @@ from rest_framework.response import Response
 from . import servicios
 from .autenticacion import firmar_token
 from .errores import ErrorNegocio, no_encontrado
-from .models import Categoria, MovimientoStock, Producto, Usuario
+from .models import Auditoria, Categoria, MovimientoStock, Producto, Usuario
+from .seguridad import ip_cliente, limpiar_fallos, registrar_fallo, verificar_bloqueo
 from .permisos import EsAdmin
-from .serializers import (CategoriaEntradaSerializer, CategoriaSerializer, EstadoSerializer, LoginSerializer,
+from .serializers import (AuditoriaSerializer, CategoriaEntradaSerializer, CategoriaSerializer, EstadoSerializer, LoginSerializer,
                           MovimientoEntradaSerializer, MovimientoSerializer, PedidoEntradaSerializer, PedidoSerializer,
                           ProductoEntradaSerializer, ProductoSerializer, RegistroSerializer, UsuarioSerializer)
 
@@ -54,6 +59,7 @@ def inicio(request):
     """Página de bienvenida: quien abra la URL base ve qué API es y qué rutas tiene."""
     return JsonResponse({
         'api': 'Tienda API (productos, pedidos y stock)', 'framework': 'django', 'base_datos': 'postgresql', 'version': 'v1',
+        'documentacion': '/docs',
         'rutas': ['/api/v1/health', '/api/v1/productos', '/api/v1/categorias', '/api/v1/auth/login', '/api/v1/pedidos',
                   '/api/v1/stock/reporte', '/admin/'],
         'repositorio': 'https://github.com/G2w1n/apis',
@@ -79,9 +85,13 @@ def registro(request):
 @api_view(['POST'])
 def login(request):
     datos = _validar(LoginSerializer, request)
-    usuario = Usuario.objects.filter(email=datos['email'].lower(), is_active=True).first()
+    email, ip = datos['email'].lower(), ip_cliente(request)
+    verificar_bloqueo(ip, email)  # 429 si esta IP + email está bloqueada por intentos fallidos
+    usuario = Usuario.objects.filter(email=email, is_active=True).first()
     if not usuario or not usuario.check_password(datos['password']):
+        registrar_fallo(ip, email)
         raise ErrorNegocio(401, 'CREDENCIALES_INVALIDAS', 'Email o contraseña incorrectos')
+    limpiar_fallos(ip, email)
     return Response({'usuario': UsuarioSerializer(usuario).data, 'token': firmar_token(usuario)})
 
 
@@ -101,7 +111,10 @@ def categorias(request):
     datos = _validar(CategoriaEntradaSerializer, request)
     if Categoria.objects.filter(nombre__iexact=datos['nombre']).exists():
         raise ErrorNegocio(409, 'CATEGORIA_DUPLICADA', 'Ya existe una categoría con ese nombre')
-    return Response(CategoriaSerializer(Categoria.objects.create(**datos)).data, status=201)
+    with transaction.atomic():
+        categoria = Categoria.objects.create(**datos)
+        servicios.auditar(request.user, ip_cliente(request), 'categoria.crear', 'categoria', categoria.id, {'nombre': categoria.nombre})
+    return Response(CategoriaSerializer(categoria).data, status=201)
 
 
 def _no_autenticado():
@@ -121,7 +134,7 @@ def _exigir_admin(request):
 def productos(request):
     if request.method == 'POST':
         _exigir_admin(request)
-        producto = servicios.crear_producto(dict(_validar(ProductoEntradaSerializer, request)), request.user)
+        producto = servicios.crear_producto(dict(_validar(ProductoEntradaSerializer, request)), request.user, ip_cliente(request))
         return Response(ProductoSerializer(producto).data, status=201)
 
     # Los filtros se traducen a SQL (WHERE / ILIKE / ORDER BY): la base de datos hace el trabajo
@@ -153,13 +166,13 @@ def producto_detalle(request, pk):
         return Response(ProductoSerializer(producto).data)
     _exigir_admin(request)
     if request.method == 'DELETE':
-        servicios.eliminar_producto(pk)
+        servicios.eliminar_producto(pk, request.user, ip_cliente(request))
         return Response(status=204)
     datos = dict(_validar(ProductoEntradaSerializer, request, partial=True))
     for campo in ('descripcion', 'stock', 'stock_minimo'):  # quitar valores por defecto no enviados
         if campo not in request.data:
             datos.pop(campo, None)
-    return Response(ProductoSerializer(servicios.actualizar_producto(pk, datos)).data)
+    return Response(ProductoSerializer(servicios.actualizar_producto(pk, datos, request.user, ip_cliente(request))).data)
 
 
 # ---------- Pedidos ----------
@@ -195,14 +208,14 @@ def pedido_detalle(request, pk):
 @permission_classes([IsAuthenticated, EsAdmin])
 def pedido_estado(request, pk):
     datos = _validar(EstadoSerializer, request)
-    pedido = servicios.cambiar_estado(_id(pk), datos['estado'], request.user)
+    pedido = servicios.cambiar_estado(_id(pk), datos['estado'], request.user, ip_cliente(request))
     return Response(PedidoSerializer(servicios.pedidos_visibles(request.user).get(pk=pedido.pk)).data)
 
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def pedido_cancelar(request, pk):
-    pedido = servicios.cancelar_pedido(_id(pk), request.user)
+    pedido = servicios.cancelar_pedido(_id(pk), request.user, ip_cliente(request))
     return Response(PedidoSerializer(servicios.pedidos_visibles(request.user).get(pk=pedido.pk)).data)
 
 
@@ -212,7 +225,7 @@ def pedido_cancelar(request, pk):
 @permission_classes([IsAuthenticated, EsAdmin])
 def movimientos(request):
     if request.method == 'POST':
-        mov = servicios.registrar_movimiento(_validar(MovimientoEntradaSerializer, request), request.user)
+        mov = servicios.registrar_movimiento(_validar(MovimientoEntradaSerializer, request), request.user, ip_cliente(request))
         return Response(MovimientoSerializer(mov).data, status=201)
     qs = MovimientoStock.objects.select_related('producto')
     if request.query_params.get('producto_id'):
@@ -234,3 +247,37 @@ def alertas(request):
 @permission_classes([IsAuthenticated, EsAdmin])
 def reporte(request):
     return Response(servicios.reporte())
+
+
+# ---------- Auditoría ----------
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, EsAdmin])
+def auditoria(request):
+    qs = Auditoria.objects.select_related('usuario')
+    for campo in ('entidad', 'entidad_id', 'accion'):
+        if request.query_params.get(campo):
+            qs = qs.filter(**{campo: request.query_params[campo]})
+    return _paginar(request, qs, AuditoriaSerializer)
+
+
+# ---------- Documentación (Swagger compartido en ../shared) ----------
+
+_SHARED = Path(settings.BASE_DIR).parent / 'shared'
+# Swagger UI carga JS y CSS desde unpkg: esta página lleva su propia Content-Security-Policy
+_CSP_DOCS = ("default-src 'self'; script-src 'self' https://unpkg.com; "
+             "style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data: https:; connect-src 'self'")
+
+
+def _archivo(nombre, tipo, csp=False):
+    def vista(request):
+        respuesta = HttpResponse((_SHARED / nombre).read_text(encoding='utf-8'), content_type=tipo)
+        if csp:
+            respuesta['Content-Security-Policy'] = _CSP_DOCS
+        return respuesta
+    return vista
+
+
+docs = _archivo('docs.html', 'text/html; charset=utf-8', csp=True)
+docs_js = _archivo('docs.js', 'application/javascript')
+openapi = _archivo('openapi.yaml', 'text/yaml; charset=utf-8')

@@ -9,12 +9,12 @@ const r = Router();
 r.get('/', async (req, res) => res.json(await productos.listar(req.query)));
 r.get('/:id', async (req, res) => res.json(await productos.obtener(req.params.id)));
 r.post('/', autenticar, soloAdmin, validar(productoSchema), async (req, res) =>
-  res.status(201).json(await productos.crear(req.body, req.usuario.id)));
-const actualizar = async (req, res) => res.json(await productos.actualizar(req.params.id, req.body));
+  res.status(201).json(await productos.crear(req.body, req.usuario)));
+const actualizar = async (req, res) => res.json(await productos.actualizar(req.params.id, req.body, req.usuario));
 r.put('/:id', autenticar, soloAdmin, validar(productoUpdateSchema), actualizar);
 r.patch('/:id', autenticar, soloAdmin, validar(productoUpdateSchema), actualizar);
 r.delete('/:id', autenticar, soloAdmin, async (req, res) => {
-  await productos.eliminar(req.params.id);
+  await productos.eliminar(req.params.id, req.usuario);
   res.status(204).end();
 });
 export default r;

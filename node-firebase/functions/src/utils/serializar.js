@@ -14,6 +14,7 @@ export const productoJSON = (id, p) => ({
   stock: p.stock,
   stock_minimo: p.stock_minimo,
   bajo_stock: p.stock <= p.stock_minimo,
+  imagen_url: p.imagen_url ?? null,
   categoria: p.categoria_id ? { id: p.categoria_id, nombre: p.categoria_nombre } : null,
   activo: p.activo,
   created_at: iso(p.created_at),
@@ -28,6 +29,18 @@ export const pedidoJSON = (id, p) => ({
   items: p.items,
   historial: (p.historial || []).map((h) => ({ estado: h.estado, fecha: iso(h.fecha) })),
   created_at: iso(p.created_at),
+});
+
+export const auditoriaJSON = (id, a, emails = {}) => ({
+  id,
+  accion: a.accion,
+  entidad: a.entidad,
+  entidad_id: a.entidad_id,
+  usuario_id: a.usuario_id ?? null,
+  usuario_email: emails[a.usuario_id] ?? null,
+  ip: a.ip ?? null,
+  detalle: a.detalle ?? {},
+  created_at: iso(a.created_at),
 });
 
 export const movimientoJSON = (id, m) => ({

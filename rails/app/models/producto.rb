@@ -10,7 +10,7 @@ class Producto < ApplicationRecord
   def as_json(*)
     {
       id:, sku:, nombre:, descripcion:,
-      precio: precio.to_f, stock:, stock_minimo:, bajo_stock: bajo_stock?,
+      precio: precio.to_f, stock:, stock_minimo:, bajo_stock: bajo_stock?, imagen_url:,
       categoria: categoria && { id: categoria.id, nombre: categoria.nombre },
       activo:, created_at: created_at.iso8601(3), updated_at: updated_at.iso8601(3)
     }

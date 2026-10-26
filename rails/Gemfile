@@ -5,7 +5,8 @@ gem "pg", "~> 1.1"
 gem "puma", ">= 5.0"
 gem "bcrypt", "~> 3.1"      # has_secure_password
 gem "jwt", "~> 3.1"         # tokens de autenticación
-gem "rack-cors"             # permitir llamadas desde el navegador
+gem "rack-cors"             # permitir llamadas desde el navegador (solo orígenes conocidos)
+gem "rack-attack"           # límite de peticiones por IP
 gem "tzinfo-data", platforms: %i[ windows jruby ]
 gem "bootsnap", require: false
 

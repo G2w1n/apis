@@ -1,6 +1,10 @@
 Rails.application.routes.draw do
   root "salud#inicio"
   get "health", to: "salud#show"
+  # format: false → Rails no debe leer ".js" o ".yaml" como el formato de la ruta /docs
+  get "docs", to: "docs#html", format: false
+  get "docs.js", to: "docs#js", format: false
+  get "openapi.yaml", to: "docs#openapi", format: false
 
   scope "api/v1", defaults: { format: :json } do
     get  "health",        to: "salud#show"
@@ -24,6 +28,8 @@ Rails.application.routes.draw do
       get  "alertas"
       get  "reporte"
     end
+
+    get "auditoria", to: "auditoria#index"
   end
 
   match "*ruta", to: "application#ruta_no_encontrada", via: :all

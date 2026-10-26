@@ -59,10 +59,11 @@ module PedidosService
     usuario.admin? ? base : base.where(usuario:)
   end
 
-  def cancelar(id, usuario)
+  def cancelar(id, usuario, ip = nil)
     ActiveRecord::Base.transaction do
       pedido = bloquear(id, usuario)
       validar_transicion!(pedido.estado, "cancelado")
+      AuditoriaService.registrar(usuario, ip, "pedido.cancelar", "pedido", pedido.id, { de: pedido.estado, a: "cancelado" })
       detalles = pedido.items.to_a
       productos = Producto.where(id: detalles.map(&:producto_id)).order(:id).lock.index_by(&:id)
       detalles.each do |d|
@@ -77,11 +78,12 @@ module PedidosService
     end
   end
 
-  def cambiar_estado(id, estado, usuario)
-    return cancelar(id, usuario) if estado == "cancelado"
+  def cambiar_estado(id, estado, usuario, ip = nil)
+    return cancelar(id, usuario, ip) if estado == "cancelado"
     ActiveRecord::Base.transaction do
       pedido = bloquear(id, usuario)
       validar_transicion!(pedido.estado, estado)
+      AuditoriaService.registrar(usuario, ip, "pedido.estado", "pedido", pedido.id, { de: pedido.estado, a: estado })
       pedido.update!(estado:)
       pedido.historial.create!(estado:)
       pedido

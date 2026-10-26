@@ -5,7 +5,7 @@
  */
 import { describe, it, before } from 'node:test';
 import assert from 'node:assert/strict';
-import { api, login, nuevoCliente, crearProducto, unico } from './cliente.js';
+import { api, login, nuevoCliente, crearProducto, unico, BASE, RAIZ } from './cliente.js';
 
 const NO_EXISTE = '999999999';
 let admin;
@@ -42,7 +42,7 @@ describe('Autenticación', () => {
   });
 
   it('no permite registrar el mismo email dos veces', async () => {
-    const r = await api('POST', '/auth/register', { body: { nombre: 'X', email: cliente.email, password: 'Secreta123' } });
+    const r = await api('POST', '/auth/register', { body: { nombre: 'X', email: cliente.email, password: 'Secreta123*' } });
     assert.equal(r.status, 409);
     assert.equal(codigo(r), 'EMAIL_EN_USO');
   });
@@ -340,5 +340,113 @@ describe('Concurrencia (anti-sobreventa)', () => {
     assert.equal(aprobados, 5, `se aprobaron ${aprobados} pedidos`);
     assert.equal(rechazados, 15);
     assert.equal((await api('GET', `/productos/${p.id}`)).body.stock, 0, 'el stock nunca debe ser negativo');
+  });
+});
+
+describe('Seguridad', () => {
+  it('el registro exige una contraseña fuerte', async () => {
+    const r = await api('POST', '/auth/register', { body: { nombre: 'Débil', email: `debil_${unico().toLowerCase()}@test.pe`, password: 'secreta123' } });
+    assert.equal(r.status, 400);
+    assert.equal(codigo(r), 'VALIDACION');
+    assert.ok(r.body.error.detalles.some((d) => d.campo === 'password'));
+  });
+
+  it('bloquea el login tras 5 intentos fallidos (fuerza bruta)', async () => {
+    const victima = await nuevoCliente();
+    for (let i = 0; i < 5; i++) {
+      const r = await api('POST', '/auth/login', { body: { email: victima.email, password: 'Incorrecta1!' } });
+      assert.equal(r.status, 401, `intento ${i + 1}`);
+    }
+    const bloqueado = await api('POST', '/auth/login', { body: { email: victima.email, password: 'Incorrecta1!' } });
+    assert.equal(bloqueado.status, 429);
+    assert.equal(codigo(bloqueado), 'DEMASIADOS_INTENTOS');
+    assert.ok(Number(bloqueado.headers.get('retry-after')) > 0, 'debe indicar cuándo reintentar');
+    const correcto = await api('POST', '/auth/login', { body: { email: victima.email, password: 'Secreta123*' } });
+    assert.equal(correcto.status, 429, 'mientras dure el bloqueo ni la contraseña correcta entra');
+    assert.ok(await login('admin@tienda.pe', 'Admin123*'), 'otros usuarios no se ven afectados');
+  });
+
+  it('CORS solo permite orígenes conocidos', async () => {
+    const preflight = (origen) => fetch(`${BASE}/productos`, {
+      method: 'OPTIONS', headers: { Origin: origen, 'Access-Control-Request-Method': 'GET' },
+    });
+    const malo = await preflight('https://sitio-malicioso.example');
+    assert.notEqual(malo.headers.get('access-control-allow-origin'), 'https://sitio-malicioso.example');
+    assert.notEqual(malo.headers.get('access-control-allow-origin'), '*');
+    const bueno = await preflight('https://g2w1n-voltec.onrender.com');
+    assert.equal(bueno.headers.get('access-control-allow-origin'), 'https://g2w1n-voltec.onrender.com');
+  });
+
+  it('envía cabeceras de seguridad', async () => {
+    const r = await api('GET', '/health');
+    assert.equal(r.headers.get('x-content-type-options'), 'nosniff');
+  });
+});
+
+describe('Imágenes de productos', () => {
+  it('guarda y devuelve imagen_url', async () => {
+    const p = await crearProducto(admin, { imagen_url: 'https://ejemplo.com/foto.webp' });
+    assert.equal(p.imagen_url, 'https://ejemplo.com/foto.webp');
+    const cambio = await api('PATCH', `/productos/${p.id}`, { token: admin, body: { imagen_url: '/img/productos/foto.webp' } });
+    assert.equal(cambio.status, 200);
+    assert.equal(cambio.body.imagen_url, '/img/productos/foto.webp');
+    const sinImagen = await crearProducto(admin);
+    assert.equal(sinImagen.imagen_url, null);
+  });
+
+  it('rechaza URLs peligrosas', async () => {
+    const r = await api('POST', '/productos', { token: admin, body: { sku: `T-${unico()}`, nombre: 'X', precio: 1, imagen_url: 'javascript:alert(1)' } });
+    assert.equal(r.status, 400);
+    assert.equal(codigo(r), 'VALIDACION');
+  });
+});
+
+describe('Auditoría', () => {
+  it('registra quién cambió un producto, qué cambió y cuándo', async () => {
+    const yo = (await api('GET', '/auth/me', { token: admin })).body;
+    const p = await crearProducto(admin, { precio: 10.1 });
+    await api('PATCH', `/productos/${p.id}`, { token: admin, body: { precio: 15.5 } });
+    await api('DELETE', `/productos/${p.id}`, { token: admin });
+
+    const r = await api('GET', `/auditoria?entidad=producto&entidad_id=${p.id}`, { token: admin });
+    assert.equal(r.status, 200);
+    const acciones = r.body.data.map((a) => a.accion);
+    assert.ok(acciones.includes('producto.crear'));
+    assert.ok(acciones.includes('producto.eliminar'));
+    const cambio = r.body.data.find((a) => a.accion === 'producto.actualizar');
+    assert.deepEqual(cambio.detalle.cambios.precio, { antes: 10.1, despues: 15.5 });
+    assert.equal(String(cambio.usuario_id), String(yo.id));
+    assert.ok(cambio.created_at);
+  });
+
+  it('registra cambios de estado de pedidos y movimientos de stock', async () => {
+    const p = await crearProducto(admin, { stock: 10 });
+    const pedido = (await api('POST', '/pedidos', { token: cliente.token, body: { items: [{ producto_id: p.id, cantidad: 1 }] } })).body;
+    await api('PATCH', `/pedidos/${pedido.id}/estado`, { token: admin, body: { estado: 'pagado' } });
+    await api('POST', '/stock/movimientos', { token: admin, body: { producto_id: p.id, tipo: 'entrada', cantidad: 3, motivo: 'Compra' } });
+
+    const estados = await api('GET', `/auditoria?entidad=pedido&entidad_id=${pedido.id}`, { token: admin });
+    const e = estados.body.data.find((a) => a.accion === 'pedido.estado');
+    assert.deepEqual([e.detalle.de, e.detalle.a], ['pendiente', 'pagado']);
+    const stock = await api('GET', `/auditoria?entidad=producto&entidad_id=${p.id}`, { token: admin });
+    const m = stock.body.data.find((a) => a.accion === 'stock.movimiento');
+    assert.equal(m.detalle.cantidad, 3);
+    assert.equal(m.detalle.stock_resultante, 12); // 10 − 1 vendido + 3 de entrada
+  });
+
+  it('solo el admin puede ver la auditoría', async () => {
+    assert.equal((await api('GET', '/auditoria', { token: cliente.token })).status, 403);
+  });
+});
+
+describe('Documentación', () => {
+  it('sirve Swagger UI en /docs y la especificación OpenAPI', async () => {
+    const docs = await fetch(`${RAIZ}/docs`);
+    assert.equal(docs.status, 200);
+    assert.match(docs.headers.get('content-type'), /html/);
+    assert.match(await docs.text(), /swagger-ui/i);
+    const spec = await fetch(`${RAIZ}/openapi.yaml`);
+    assert.equal(spec.status, 200);
+    assert.match(await spec.text(), /openapi: 3/);
   });
 });

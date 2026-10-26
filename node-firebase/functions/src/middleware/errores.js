@@ -7,6 +7,7 @@ export const rutaNoEncontrada = (req, _res, next) =>
 // eslint-disable-next-line no-unused-vars
 export function manejarErrores(err, _req, res, _next) {
   if (err instanceof AppError) {
+    if (err.cabeceras) res.set(err.cabeceras);
     return res.status(err.status).json({
       error: { codigo: err.codigo, mensaje: err.message, ...(err.detalles && { detalles: err.detalles }) },
     });

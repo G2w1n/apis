@@ -1,7 +1,7 @@
 module StockService
   module_function
 
-  def registrar(datos, usuario)
+  def registrar(datos, usuario, ip = nil)
     ActiveRecord::Base.transaction do
       producto = Producto.activos.lock.find_by(id: datos[:producto_id]) || raise(ErrorNegocio.no_encontrado("Producto"))
       cantidad = datos[:cantidad]
@@ -10,6 +10,8 @@ module StockService
                                [ { producto_id: producto.id, nombre: producto.nombre, solicitado: cantidad, disponible: producto.stock } ])
       end
       producto.update!(stock: producto.stock + (datos[:tipo] == "entrada" ? cantidad : -cantidad))
+      AuditoriaService.registrar(usuario, ip, "stock.movimiento", "producto", producto.id,
+                                 { tipo: datos[:tipo], cantidad:, stock_resultante: producto.stock, motivo: datos[:motivo] })
       MovimientoStock.create!(producto:, tipo: datos[:tipo], cantidad:, stock_resultante: producto.stock,
                               motivo: datos[:motivo], usuario:)
     end

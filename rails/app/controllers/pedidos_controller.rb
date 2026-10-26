@@ -25,11 +25,11 @@ class PedidosController < ApplicationController
 
   def estado
     datos = Validador.new(cuerpo).opcion(:estado, Pedido::ESTADOS).resultado!
-    render json: recargar(PedidosService.cambiar_estado(id_param, datos[:estado], usuario_actual))
+    render json: recargar(PedidosService.cambiar_estado(id_param, datos[:estado], usuario_actual, request.remote_ip))
   end
 
   def cancelar
-    render json: recargar(PedidosService.cancelar(id_param, usuario_actual))
+    render json: recargar(PedidosService.cancelar(id_param, usuario_actual, request.remote_ip))
   end
 
   private

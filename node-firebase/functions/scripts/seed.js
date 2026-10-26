@@ -20,9 +20,9 @@ for (const c of Object.values(col)) await db.recursiveDelete(c);
 const ids = {};
 for (const u of seed.usuarios) ids[u.email] = (await usuarios.registrar(u, u.rol)).usuario.id;
 const cats = {};
-for (const c of seed.categorias) cats[c.nombre] = (await categorias.crear(c)).id;
+for (const c of seed.categorias) cats[c.nombre] = (await categorias.crear(c, { id: ids['admin@tienda.pe'] })).id;
 for (const { categoria, ...p } of seed.productos) {
-  await productos.crear({ ...p, categoria_id: cats[categoria] }, ids['admin@tienda.pe']);
+  await productos.crear({ ...p, categoria_id: cats[categoria] }, { id: ids['admin@tienda.pe'] });
 }
 console.log(`Seed listo: ${seed.usuarios.length} usuarios, ${seed.categorias.length} categorías, ${seed.productos.length} productos`);
 process.exit(0);

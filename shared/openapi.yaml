@@ -1,0 +1,490 @@
+openapi: 3.0.3
+info:
+  title: Tienda API — productos, pedidos y stock
+  version: 1.0.0
+  description: |
+    Misma API implementada en **Express + Firestore**, **Django + PostgreSQL** y **Ruby on Rails + PostgreSQL**.
+    Las tres cumplen este contrato y pasan las mismas pruebas (`tests/contrato.test.js`).
+
+    **Cómo probar:** usa `POST /auth/login` con `admin@tienda.pe` / `Admin123*`, copia el `token`,
+    pulsa **Authorize** y pégalo. Los IDs son números en Django/Rails y texto en Firestore.
+
+    **Seguridad:** 5 logins fallidos bloquean ese email 15 min (429), hay un límite de peticiones por IP (429)
+    y CORS solo acepta orígenes conocidos.
+  contact:
+    name: Código fuente
+    url: https://github.com/G2w1n/apis
+servers:
+  - url: ./api/v1
+    description: Este servidor
+tags:
+  - name: Auth
+  - name: Categorías
+  - name: Productos
+  - name: Pedidos
+  - name: Stock
+  - name: Auditoría
+  - name: Sistema
+
+components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema: { type: string }
+      description: ID numérico (SQL) o texto (Firestore)
+    Page:
+      name: page
+      in: query
+      schema: { type: integer, minimum: 1, default: 1 }
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 10 }
+
+  schemas:
+    Id:
+      oneOf: [{ type: integer }, { type: string }]
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          required: [codigo, mensaje]
+          properties:
+            codigo: { type: string, example: STOCK_INSUFICIENTE }
+            mensaje: { type: string, example: No hay stock suficiente }
+            detalles: {}
+    Meta:
+      type: object
+      properties:
+        page: { type: integer }
+        limit: { type: integer }
+        total: { type: integer }
+        paginas: { type: integer }
+    Usuario:
+      type: object
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        nombre: { type: string }
+        email: { type: string, format: email }
+        rol: { type: string, enum: [admin, cliente] }
+    Sesion:
+      type: object
+      properties:
+        usuario: { $ref: '#/components/schemas/Usuario' }
+        token: { type: string }
+    Categoria:
+      type: object
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        nombre: { type: string, example: Laptops }
+        descripcion: { type: string }
+    Producto:
+      type: object
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        sku: { type: string, example: LAP-001 }
+        nombre: { type: string, example: Laptop Lenovo IdeaPad 5 }
+        descripcion: { type: string }
+        precio: { type: number, example: 3299.9 }
+        stock: { type: integer, example: 12 }
+        stock_minimo: { type: integer, example: 3 }
+        bajo_stock: { type: boolean }
+        imagen_url: { type: string, nullable: true, example: /img/productos/LAP-001.webp }
+        categoria:
+          nullable: true
+          type: object
+          properties:
+            id: { $ref: '#/components/schemas/Id' }
+            nombre: { type: string }
+        activo: { type: boolean }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    ProductoEntrada:
+      type: object
+      required: [sku, nombre, precio]
+      properties:
+        sku: { type: string, maxLength: 30 }
+        nombre: { type: string, maxLength: 120 }
+        descripcion: { type: string }
+        precio: { type: number, minimum: 0.01, description: Máximo 2 decimales }
+        stock: { type: integer, minimum: 0, description: Solo al crear (se registra como entrada en el kardex) }
+        stock_minimo: { type: integer, minimum: 0 }
+        categoria_id: { $ref: '#/components/schemas/Id' }
+        imagen_url: { type: string, nullable: true, description: 'URL http(s) o ruta que empiece con /' }
+    ItemPedido:
+      type: object
+      properties:
+        producto_id: { $ref: '#/components/schemas/Id' }
+        sku: { type: string }
+        nombre: { type: string }
+        cantidad: { type: integer }
+        precio_unitario: { type: number }
+        subtotal: { type: number }
+    Pedido:
+      type: object
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        usuario_id: { $ref: '#/components/schemas/Id' }
+        estado: { type: string, enum: [pendiente, pagado, enviado, entregado, cancelado] }
+        total: { type: number }
+        items: { type: array, items: { $ref: '#/components/schemas/ItemPedido' } }
+        historial:
+          type: array
+          items:
+            type: object
+            properties:
+              estado: { type: string }
+              fecha: { type: string, format: date-time }
+        created_at: { type: string, format: date-time }
+    Movimiento:
+      type: object
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        producto_id: { $ref: '#/components/schemas/Id' }
+        producto_nombre: { type: string }
+        tipo: { type: string, enum: [entrada, salida] }
+        cantidad: { type: integer }
+        stock_resultante: { type: integer }
+        motivo: { type: string }
+        pedido_id: { $ref: '#/components/schemas/Id' }
+        usuario_id: { $ref: '#/components/schemas/Id' }
+        created_at: { type: string, format: date-time }
+    RegistroAuditoria:
+      type: object
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        accion:
+          type: string
+          enum: [categoria.crear, producto.crear, producto.actualizar, producto.eliminar, stock.movimiento, pedido.estado, pedido.cancelar, auth.bloqueo]
+        entidad: { type: string, enum: [categoria, producto, pedido, usuario] }
+        entidad_id: { type: string }
+        usuario_id: { $ref: '#/components/schemas/Id' }
+        usuario_email: { type: string, nullable: true }
+        ip: { type: string, nullable: true }
+        detalle:
+          type: object
+          example: { cambios: { precio: { antes: 10.1, despues: 15.5 } } }
+        created_at: { type: string, format: date-time }
+
+  responses:
+    Error400: { description: Datos inválidos (VALIDACION), content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    Error401: { description: Falta el token o es inválido (NO_AUTENTICADO), content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    Error403: { description: Requiere rol admin (PROHIBIDO), content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    Error404: { description: No existe (NO_ENCONTRADO), content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    Error429: { description: Demasiadas peticiones o intentos (LIMITE_PETICIONES / DEMASIADOS_INTENTOS). Revisa el header Retry-After., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+
+paths:
+  /health:
+    get:
+      tags: [Sistema]
+      summary: Estado de la API
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              example: { status: ok, framework: express, base_datos: firestore }
+
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Registrar un cliente
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nombre, email, password]
+              properties:
+                nombre: { type: string }
+                email: { type: string, format: email }
+                password: { type: string, description: 'Mínimo 8 caracteres con mayúscula, minúscula, número y símbolo', example: 'Secreta123*' }
+      responses:
+        '201': { description: Usuario creado, content: { application/json: { schema: { $ref: '#/components/schemas/Sesion' } } } }
+        '400': { $ref: '#/components/responses/Error400' }
+        '409': { description: EMAIL_EN_USO }
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Iniciar sesión
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, example: admin@tienda.pe }
+                password: { type: string, example: Admin123* }
+      responses:
+        '200': { description: Sesión iniciada, content: { application/json: { schema: { $ref: '#/components/schemas/Sesion' } } } }
+        '401': { description: CREDENCIALES_INVALIDAS }
+        '429': { $ref: '#/components/responses/Error429' }
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Usuario del token
+      security: [{ bearer: [] }]
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Usuario' } } } }
+        '401': { $ref: '#/components/responses/Error401' }
+
+  /categorias:
+    get:
+      tags: [Categorías]
+      summary: Listar categorías
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/Categoria' } } } }
+    post:
+      tags: [Categorías]
+      summary: Crear categoría (admin)
+      security: [{ bearer: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [nombre], properties: { nombre: { type: string }, descripcion: { type: string } } }
+      responses:
+        '201': { description: Creada, content: { application/json: { schema: { $ref: '#/components/schemas/Categoria' } } } }
+        '403': { $ref: '#/components/responses/Error403' }
+        '409': { description: CATEGORIA_DUPLICADA }
+
+  /productos:
+    get:
+      tags: [Productos]
+      summary: Catálogo con filtros y paginación
+      parameters:
+        - { name: q, in: query, schema: { type: string }, description: Busca en nombre y SKU }
+        - { name: categoria, in: query, schema: { type: string } }
+        - { name: precio_min, in: query, schema: { type: number } }
+        - { name: precio_max, in: query, schema: { type: number } }
+        - { name: bajo_stock, in: query, schema: { type: string, enum: ['true'] } }
+        - { name: orden, in: query, schema: { type: string, enum: [nombre, -nombre, precio, -precio, stock, -stock, creado, -creado] } }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/Producto' } }
+                  meta: { $ref: '#/components/schemas/Meta' }
+    post:
+      tags: [Productos]
+      summary: Crear producto (admin)
+      security: [{ bearer: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ProductoEntrada' } } } }
+      responses:
+        '201': { description: Creado, content: { application/json: { schema: { $ref: '#/components/schemas/Producto' } } } }
+        '400': { $ref: '#/components/responses/Error400' }
+        '403': { $ref: '#/components/responses/Error403' }
+        '409': { description: SKU_DUPLICADO }
+  /productos/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Productos]
+      summary: Detalle de un producto
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Producto' } } } }
+        '404': { $ref: '#/components/responses/Error404' }
+    patch:
+      tags: [Productos]
+      summary: Editar producto (admin) — el stock NO se edita aquí
+      security: [{ bearer: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ProductoEntrada' } } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Producto' } } } }
+        '400': { $ref: '#/components/responses/Error400' }
+        '404': { $ref: '#/components/responses/Error404' }
+    put:
+      tags: [Productos]
+      summary: Igual que PATCH
+      security: [{ bearer: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ProductoEntrada' } } } }
+      responses:
+        '200': { description: OK }
+    delete:
+      tags: [Productos]
+      summary: Retirar producto (borrado lógico, admin)
+      security: [{ bearer: [] }]
+      responses:
+        '204': { description: Retirado }
+        '404': { $ref: '#/components/responses/Error404' }
+
+  /pedidos:
+    get:
+      tags: [Pedidos]
+      summary: Mis pedidos (admin ve todos)
+      security: [{ bearer: [] }]
+      parameters:
+        - { name: estado, in: query, schema: { type: string, enum: [pendiente, pagado, enviado, entregado, cancelado] } }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/Pedido' } }
+                  meta: { $ref: '#/components/schemas/Meta' }
+    post:
+      tags: [Pedidos]
+      summary: Crear pedido (descuenta stock de forma atómica)
+      security: [{ bearer: [] }]
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          schema: { type: string }
+          description: Si se repite la misma clave se devuelve el pedido original (200 + header Idempotent-Replayed)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [items]
+              properties:
+                items:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    required: [producto_id, cantidad]
+                    properties:
+                      producto_id: { $ref: '#/components/schemas/Id' }
+                      cantidad: { type: integer, minimum: 1 }
+      responses:
+        '201': { description: Creado, content: { application/json: { schema: { $ref: '#/components/schemas/Pedido' } } } }
+        '200': { description: Petición repetida (idempotencia) }
+        '409': { description: STOCK_INSUFICIENTE (detalles con solicitado y disponible) }
+        '422': { description: PRODUCTO_NO_DISPONIBLE }
+  /pedidos/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Pedidos]
+      summary: Detalle (dueño o admin)
+      security: [{ bearer: [] }]
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Pedido' } } } }
+        '404': { $ref: '#/components/responses/Error404' }
+  /pedidos/{id}/estado:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    patch:
+      tags: [Pedidos]
+      summary: Cambiar estado (admin) — pendiente → pagado → enviado → entregado
+      security: [{ bearer: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [estado], properties: { estado: { type: string, enum: [pagado, enviado, entregado, cancelado] } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Pedido' } } } }
+        '422': { description: TRANSICION_INVALIDA }
+  /pedidos/{id}/cancelar:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [Pedidos]
+      summary: Cancelar y devolver el stock (dueño o admin)
+      security: [{ bearer: [] }]
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Pedido' } } } }
+        '422': { description: TRANSICION_INVALIDA }
+
+  /stock/movimientos:
+    get:
+      tags: [Stock]
+      summary: Kardex (admin)
+      security: [{ bearer: [] }]
+      parameters:
+        - { name: producto_id, in: query, schema: { type: string } }
+        - { name: tipo, in: query, schema: { type: string, enum: [entrada, salida] } }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/Movimiento' } }
+                  meta: { $ref: '#/components/schemas/Meta' }
+    post:
+      tags: [Stock]
+      summary: Registrar entrada o salida (admin)
+      security: [{ bearer: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [producto_id, tipo, cantidad, motivo]
+              properties:
+                producto_id: { $ref: '#/components/schemas/Id' }
+                tipo: { type: string, enum: [entrada, salida] }
+                cantidad: { type: integer, minimum: 1 }
+                motivo: { type: string, example: Compra a proveedor }
+      responses:
+        '201': { description: Registrado, content: { application/json: { schema: { $ref: '#/components/schemas/Movimiento' } } } }
+        '409': { description: STOCK_INSUFICIENTE }
+  /stock/alertas:
+    get:
+      tags: [Stock]
+      summary: Productos en o bajo su stock mínimo (admin)
+      security: [{ bearer: [] }]
+      responses:
+        '200': { description: OK }
+  /stock/reporte:
+    get:
+      tags: [Stock]
+      summary: Inventario, ingresos, pedidos por estado y más vendidos (admin)
+      security: [{ bearer: [] }]
+      responses:
+        '200': { description: OK }
+
+  /auditoria:
+    get:
+      tags: [Auditoría]
+      summary: Quién cambió qué y cuándo (admin)
+      security: [{ bearer: [] }]
+      parameters:
+        - { name: entidad, in: query, schema: { type: string, enum: [categoria, producto, pedido, usuario] } }
+        - { name: entidad_id, in: query, schema: { type: string } }
+        - { name: accion, in: query, schema: { type: string } }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/RegistroAuditoria' } }
+                  meta: { $ref: '#/components/schemas/Meta' }
+        '403': { $ref: '#/components/responses/Error403' }

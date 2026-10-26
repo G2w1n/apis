@@ -27,6 +27,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'api.seguridad.LimitePeticiones',
     'whitenoise.middleware.WhiteNoiseMiddleware',  # sirve el CSS del panel /admin/ en producción
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -96,9 +97,21 @@ STORAGES = {
 }
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-CORS_ALLOW_ALL_ORIGINS = True
+# CORS: solo orígenes conocidos pueden llamar a la API desde el navegador
+CORS_ALLOWED_ORIGINS = [
+    'https://g2w1n-voltec.onrender.com',
+    'https://g2w1n-tienda-panel.onrender.com',
+    'https://probandoapi-8c9b8.web.app',
+    'https://probandoapi-8c9b8.firebaseapp.com',
+    *[o.strip() for o in os.environ.get('CORS_ORIGENES', '').split(',') if o.strip()],
+]
+CORS_ALLOWED_ORIGIN_REGEXES = [r'^http://(localhost|127\.0\.0\.1)(:\d+)?$']
 CORS_ALLOW_HEADERS = ['authorization', 'content-type', 'idempotency-key']
-CORS_EXPOSE_HEADERS = ['Idempotent-Replayed']
+CORS_EXPOSE_HEADERS = ['Idempotent-Replayed', 'Retry-After']
+
+# Límite general de peticiones por IP y por minuto (se puede subir para benchmarks)
+RATE_LIMIT_POR_MINUTO = int(os.environ.get('RATE_LIMIT_POR_MINUTO', '600'))
+X_FRAME_OPTIONS = 'DENY'
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': ['api.autenticacion.JWTAuthentication'],

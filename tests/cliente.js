@@ -1,5 +1,7 @@
 // Cliente HTTP mínimo (fetch nativo de Node 20+) para probar cualquiera de las 3 APIs
 export const BASE = (process.env.BASE_URL || 'http://localhost:3000/api/v1').replace(/\/$/, '');
+// Raíz del servidor (donde viven /docs y /openapi.yaml)
+export const RAIZ = BASE.replace(/\/api\/v1$/, '');
 
 export async function api(metodo, ruta, { token, body, headers = {} } = {}) {
   const res = await fetch(BASE + ruta, {
@@ -25,7 +27,7 @@ export async function login(email, password) {
 
 export async function nuevoCliente() {
   const email = `cliente_${unico().toLowerCase()}@test.pe`;
-  const r = await api('POST', '/auth/register', { body: { nombre: 'Cliente Test', email, password: 'Secreta123' } });
+  const r = await api('POST', '/auth/register', { body: { nombre: 'Cliente Test', email, password: 'Secreta123*' } });
   return { ...r.body, email };
 }
 

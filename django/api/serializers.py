@@ -1,9 +1,25 @@
 """Serializers = validación de entrada + formato JSON de salida (equivalen a los esquemas Zod de Express)."""
+import re
 from decimal import Decimal
 
 from rest_framework import serializers
 
-from .models import Categoria, DetallePedido, MovimientoStock, Pedido, Producto, Usuario
+from .models import Auditoria, Categoria, DetallePedido, MovimientoStock, Pedido, Producto, Usuario
+
+
+def password_fuerte(valor):
+    """Evita claves fáciles de adivinar como "12345678" o "password"."""
+    reglas = [(r'[A-Z]', 'Debe tener al menos una mayúscula'), (r'[a-z]', 'Debe tener al menos una minúscula'),
+              (r'\d', 'Debe tener al menos un número'), (r'[^A-Za-z0-9]', 'Debe tener al menos un símbolo')]
+    errores = [mensaje for patron, mensaje in reglas if not re.search(patron, valor)]
+    if errores:
+        raise serializers.ValidationError(errores)
+
+
+def url_segura(valor):
+    """Solo http(s) o rutas relativas: bloquea "javascript:" y otros esquemas peligrosos."""
+    if valor and not re.match(r'^(https?://|/)', valor):
+        raise serializers.ValidationError('Debe ser una URL http(s) o una ruta que empiece con /')
 
 
 # ---------- Entrada ----------
@@ -11,7 +27,7 @@ from .models import Categoria, DetallePedido, MovimientoStock, Pedido, Producto,
 class RegistroSerializer(serializers.Serializer):
     nombre = serializers.CharField(max_length=100)
     email = serializers.EmailField()
-    password = serializers.CharField(min_length=8, max_length=72)
+    password = serializers.CharField(min_length=8, max_length=72, validators=[password_fuerte])
 
     def validate_email(self, valor):
         return valor.strip().lower()
@@ -35,6 +51,7 @@ class ProductoEntradaSerializer(serializers.Serializer):
     stock = serializers.IntegerField(min_value=0, required=False, default=0)
     stock_minimo = serializers.IntegerField(min_value=0, required=False, default=0)
     categoria_id = serializers.IntegerField(required=False, allow_null=True)
+    imagen_url = serializers.CharField(required=False, allow_null=True, max_length=500, validators=[url_segura])
 
     def validate_sku(self, valor):
         return valor.strip().upper()
@@ -95,7 +112,7 @@ class ProductoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Producto
         fields = ['id', 'sku', 'nombre', 'descripcion', 'precio', 'stock', 'stock_minimo', 'bajo_stock',
-                  'categoria', 'activo', 'created_at', 'updated_at']
+                  'imagen_url', 'categoria', 'activo', 'created_at', 'updated_at']
 
 
 class DetallePedidoSerializer(serializers.ModelSerializer):
@@ -114,6 +131,14 @@ class PedidoSerializer(serializers.ModelSerializer):
 
     def get_historial(self, pedido):
         return [{'estado': h.estado, 'fecha': h.fecha} for h in pedido.historial.all()]
+
+
+class AuditoriaSerializer(serializers.ModelSerializer):
+    usuario_email = serializers.EmailField(source='usuario.email', read_only=True, default=None)
+
+    class Meta:
+        model = Auditoria
+        fields = ['id', 'accion', 'entidad', 'entidad_id', 'usuario_id', 'usuario_email', 'ip', 'detalle', 'created_at']
 
 
 class MovimientoSerializer(serializers.ModelSerializer):

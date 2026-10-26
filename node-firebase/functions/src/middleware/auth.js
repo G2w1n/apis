@@ -13,7 +13,8 @@ export function autenticar(req, _res, next) {
   }
   try {
     const payload = jwt.verify(token, config.jwtSecret);
-    req.usuario = { id: payload.sub, rol: payload.rol };
+    // La IP viaja con el usuario para dejarla en la auditoría
+    req.usuario = { id: payload.sub, rol: payload.rol, ip: req.ip };
     next();
   } catch {
     next(new AppError(401, 'NO_AUTENTICADO', 'Token inválido o expirado'));

@@ -14,7 +14,17 @@ from django.db import IntegrityError, transaction
 from django.db.models import Count, F, Sum
 
 from .errores import ErrorNegocio, no_encontrado
-from .models import Categoria, DetallePedido, HistorialEstado, MovimientoStock, Pedido, Producto
+from .models import Auditoria, Categoria, DetallePedido, HistorialEstado, MovimientoStock, Pedido, Producto
+
+
+def auditar(usuario, ip, accion, entidad, entidad_id, detalle=None):
+    """Se llama dentro de la misma transacción que el cambio: o se guardan ambos o ninguno."""
+    Auditoria.objects.create(usuario=usuario, ip=ip, accion=accion, entidad=entidad,
+                             entidad_id=str(entidad_id), detalle=detalle or {})
+
+
+def _json(valor):
+    return float(valor) if isinstance(valor, Decimal) else valor
 
 
 def _categoria(categoria_id):
@@ -29,7 +39,7 @@ def _categoria(categoria_id):
 # ---------- Productos ----------
 
 @transaction.atomic
-def crear_producto(datos, usuario):
+def crear_producto(datos, usuario, ip=None):
     if Producto.objects.filter(sku=datos['sku']).exists():
         raise ErrorNegocio(409, 'SKU_DUPLICADO', f"Ya existe un producto con SKU {datos['sku']}")
     categoria = _categoria(datos.pop('categoria_id', None))
@@ -41,28 +51,43 @@ def crear_producto(datos, usuario):
     if producto.stock > 0:
         MovimientoStock.objects.create(producto=producto, tipo='entrada', cantidad=producto.stock,
                                        stock_resultante=producto.stock, motivo='Stock inicial', usuario=usuario)
+    auditar(usuario, ip, 'producto.crear', 'producto', producto.id,
+            {'sku': producto.sku, 'nombre': producto.nombre, 'precio': float(producto.precio), 'stock': producto.stock})
     return producto
 
 
 @transaction.atomic
-def actualizar_producto(producto_id, datos):
+def actualizar_producto(producto_id, datos, usuario=None, ip=None):
     producto = Producto.objects.select_for_update().filter(pk=producto_id, activo=True).first()
     if not producto:
         raise no_encontrado('Producto')
     if 'sku' in datos and Producto.objects.filter(sku=datos['sku']).exclude(pk=producto.pk).exists():
         raise ErrorNegocio(409, 'SKU_DUPLICADO', f"Ya existe un producto con SKU {datos['sku']}")
+    cambios = {}
     if 'categoria_id' in datos:
-        producto.categoria = _categoria(datos.pop('categoria_id'))
+        nueva = _categoria(datos.pop('categoria_id'))
+        if producto.categoria_id != (nueva.id if nueva else None):
+            cambios['categoria_id'] = {'antes': producto.categoria_id, 'despues': nueva.id if nueva else None}
+        producto.categoria = nueva
     for campo, valor in datos.items():
+        if getattr(producto, campo) != valor:
+            cambios[campo] = {'antes': _json(getattr(producto, campo)), 'despues': _json(valor)}
         setattr(producto, campo, valor)
     producto.save()
+    if cambios:
+        auditar(usuario, ip, 'producto.actualizar', 'producto', producto.id, {'cambios': cambios})
     return producto
 
 
-def eliminar_producto(producto_id):
+@transaction.atomic
+def eliminar_producto(producto_id, usuario=None, ip=None):
     # Borrado lógico: el kardex y los pedidos antiguos siguen apuntando al producto
-    if not Producto.objects.filter(pk=producto_id, activo=True).update(activo=False):
+    producto = Producto.objects.select_for_update().filter(pk=producto_id, activo=True).first()
+    if not producto:
         raise no_encontrado('Producto')
+    producto.activo = False
+    producto.save(update_fields=['activo', 'updated_at'])
+    auditar(usuario, ip, 'producto.eliminar', 'producto', producto.id, {'sku': producto.sku, 'nombre': producto.nombre})
 
 
 # ---------- Pedidos ----------
@@ -142,9 +167,10 @@ def _validar_transicion(actual, nuevo):
 
 
 @transaction.atomic
-def cancelar_pedido(pedido_id, usuario):
+def cancelar_pedido(pedido_id, usuario, ip=None):
     pedido = _pedido_bloqueado(pedido_id, usuario)
     _validar_transicion(pedido.estado, 'cancelado')
+    auditar(usuario, ip, 'pedido.cancelar', 'pedido', pedido.id, {'de': pedido.estado, 'a': 'cancelado'})
     detalles = list(pedido.items.all())
     productos = {p.id: p for p in Producto.objects.select_for_update().filter(pk__in=[d.producto_id for d in detalles]).order_by('id')}
     for d in detalles:
@@ -160,11 +186,12 @@ def cancelar_pedido(pedido_id, usuario):
 
 
 @transaction.atomic
-def cambiar_estado(pedido_id, estado, usuario):
+def cambiar_estado(pedido_id, estado, usuario, ip=None):
     if estado == 'cancelado':
-        return cancelar_pedido(pedido_id, usuario)
+        return cancelar_pedido(pedido_id, usuario, ip)
     pedido = _pedido_bloqueado(pedido_id, usuario)
     _validar_transicion(pedido.estado, estado)
+    auditar(usuario, ip, 'pedido.estado', 'pedido', pedido.id, {'de': pedido.estado, 'a': estado})
     pedido.estado = estado
     pedido.save(update_fields=['estado'])
     HistorialEstado.objects.create(pedido=pedido, estado=estado)
@@ -174,7 +201,7 @@ def cambiar_estado(pedido_id, estado, usuario):
 # ---------- Stock ----------
 
 @transaction.atomic
-def registrar_movimiento(datos, usuario):
+def registrar_movimiento(datos, usuario, ip=None):
     producto = Producto.objects.select_for_update().filter(pk=datos['producto_id'], activo=True).first()
     if not producto:
         raise no_encontrado('Producto')
@@ -184,6 +211,8 @@ def registrar_movimiento(datos, usuario):
             {'producto_id': producto.id, 'nombre': producto.nombre, 'solicitado': cantidad, 'disponible': producto.stock}])
     producto.stock += cantidad if datos['tipo'] == 'entrada' else -cantidad
     producto.save(update_fields=['stock', 'updated_at'])
+    auditar(usuario, ip, 'stock.movimiento', 'producto', producto.id,
+            {'tipo': datos['tipo'], 'cantidad': cantidad, 'stock_resultante': producto.stock, 'motivo': datos['motivo']})
     return MovimientoStock.objects.create(producto=producto, tipo=datos['tipo'], cantidad=cantidad,
                                           stock_resultante=producto.stock, motivo=datos['motivo'], usuario=usuario)
 

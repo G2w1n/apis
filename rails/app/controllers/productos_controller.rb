@@ -28,7 +28,7 @@ class ProductosController < ApplicationController
 
   def create
     datos = validar(Validador.new(cuerpo).texto(:sku, max: 30).texto(:nombre, max: 120).dinero(:precio))
-    render json: ProductosService.crear(datos, usuario_actual), status: :created
+    render json: ProductosService.crear(datos, usuario_actual, request.remote_ip), status: :created
   end
 
   def update
@@ -38,11 +38,11 @@ class ProductosController < ApplicationController
     v.prohibir(:stock, "El stock solo se modifica con POST /stock/movimientos")
     datos = validar(v, parcial: true)
     raise ErrorNegocio.new(400, "VALIDACION", "Envíe al menos un campo") if datos.empty?
-    render json: ProductosService.actualizar(id_param, datos)
+    render json: ProductosService.actualizar(id_param, datos, usuario_actual, request.remote_ip)
   end
 
   def destroy
-    ProductosService.eliminar(id_param)
+    ProductosService.eliminar(id_param, usuario_actual, request.remote_ip)
     head :no_content
   end
 
@@ -52,6 +52,7 @@ class ProductosController < ApplicationController
     v.texto(:descripcion, max: 1000, opcional: true, vacio: true)
      .entero(:stock_minimo, min: 0, opcional: true)
      .id(:categoria_id, opcional: true, nulo: true)
+     .url(:imagen_url, max: 500)
     v.entero(:stock, min: 0, opcional: true) unless parcial
     datos = v.resultado!
     datos[:sku] = datos[:sku].upcase if datos[:sku]

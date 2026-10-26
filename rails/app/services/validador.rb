@@ -44,6 +44,30 @@ class Validador
     end
   end
 
+  # Solo http(s) o rutas relativas: bloquea "javascript:" y otros esquemas peligrosos
+  def url(campo, max:, opcional: true)
+    leer(campo, opcional, nulo: true) do |v|
+      next error(campo, "Debe ser texto") unless v.is_a?(String)
+      v = v.strip
+      next error(campo, "Máximo #{max} caracteres") if v.length > max
+      next error(campo, "Debe ser una URL http(s) o una ruta que empiece con /") unless v.match?(%r{\A(https?://|/)})
+      v
+    end
+  end
+
+  # Contraseña fuerte: evita claves fáciles de adivinar como "12345678" o "password"
+  def password_fuerte(campo)
+    leer(campo, false) do |v|
+      next error(campo, "Debe ser texto") unless v.is_a?(String)
+      reglas = { /.{8,}/ => "Mínimo 8 caracteres", /[A-Z]/ => "Debe tener al menos una mayúscula",
+                 /[a-z]/ => "Debe tener al menos una minúscula", /\d/ => "Debe tener al menos un número",
+                 /[^A-Za-z0-9]/ => "Debe tener al menos un símbolo" }
+      fallas = reglas.reject { |patron, _| v.match?(patron) }.values
+      next error(campo, "Máximo 72 caracteres") if v.length > 72
+      fallas.empty? ? v : fallas.map { |m| error(campo, m) }.last
+    end
+  end
+
   def id(campo, opcional: false, nulo: false)
     leer(campo, opcional, nulo:) do |v|
       Integer(v.to_s, exception: false) || error(campo, "Identificador inválido")

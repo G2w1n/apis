@@ -3,6 +3,7 @@ import { db, col } from '../firebase.js';
 import { AppError } from '../utils/AppError.js';
 import { firmarToken } from '../middleware/auth.js';
 import { usuarioJSON } from '../utils/serializar.js';
+import * as intentos from './intentosLogin.js';
 
 export async function registrar({ nombre, email, password }, rol = 'cliente') {
   const ref = col.usuarios.doc();
@@ -20,12 +21,15 @@ export async function registrar({ nombre, email, password }, rol = 'cliente') {
   return { usuario: usuarioJSON(ref.id, usuario), token: firmarToken(ref.id, rol) };
 }
 
-export async function login({ email, password }) {
+export async function login({ email, password }, ip) {
+  await intentos.verificar(ip, email); // 429 si esta IP + email está bloqueada
   const snap = await col.usuarios.where('email', '==', email).limit(1).get();
   const doc = snap.docs[0];
   if (!doc || !(await bcrypt.compare(password, doc.data().password_hash))) {
+    await intentos.registrarFallo(ip, email);
     throw new AppError(401, 'CREDENCIALES_INVALIDAS', 'Email o contraseña incorrectos');
   }
+  await intentos.limpiar(ip, email);
   const u = doc.data();
   return { usuario: usuarioJSON(doc.id, u), token: firmarToken(doc.id, u.rol) };
 }

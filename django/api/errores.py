@@ -45,7 +45,10 @@ def _respuesta(status_code, codigo, mensaje, detalles=None):
 
 def manejar_excepcion(exc, context):
     if isinstance(exc, ErrorNegocio):
-        return _respuesta(exc.status_code, exc.codigo, exc.mensaje, exc.detalles)
+        respuesta = _respuesta(exc.status_code, exc.codigo, exc.mensaje, exc.detalles)
+        for nombre, valor in (getattr(exc, 'cabeceras', None) or {}).items():
+            respuesta[nombre] = valor
+        return respuesta
     if isinstance(exc, exceptions.ValidationError):
         return _respuesta(400, 'VALIDACION', 'Los datos enviados no son válidos', _aplanar(exc.detail))
     if isinstance(exc, exceptions.ParseError):

@@ -53,7 +53,7 @@ async function medir(nombre, base) {
 
   const admin = (await llamar(base, 'POST', '/auth/login', null, { email: 'admin@tienda.pe', password: 'Admin123*' })).json.token;
   const email = `bench_${Date.now()}@test.pe`;
-  const cliente = (await llamar(base, 'POST', '/auth/register', null, { nombre: 'Bench', email, password: 'Secreta123' })).json.token;
+  const cliente = (await llamar(base, 'POST', '/auth/register', null, { nombre: 'Bench', email, password: 'Secreta123*' })).json.token;
   const producto = (await llamar(base, 'POST', '/productos', admin, {
     sku: `BENCH-${Date.now()}`, nombre: 'Producto benchmark', precio: 10, stock: ESCRITURAS + 100, stock_minimo: 0,
   })).json;

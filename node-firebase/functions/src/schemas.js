@@ -6,10 +6,18 @@ const precio = z.number({ invalid_type_error: 'Debe ser un número' }).positive(
 const entero = (min) => z.number({ invalid_type_error: 'Debe ser un número' }).int('Debe ser entero').min(min);
 const id = z.union([z.string().min(1), z.number()]).transform(String);
 
+// Contraseña fuerte: evita claves fáciles de adivinar como "12345678" o "password"
+export const passwordFuerte = z.string()
+  .min(8, 'Mínimo 8 caracteres').max(72)
+  .regex(/[A-Z]/, 'Debe tener al menos una mayúscula')
+  .regex(/[a-z]/, 'Debe tener al menos una minúscula')
+  .regex(/\d/, 'Debe tener al menos un número')
+  .regex(/[^A-Za-z0-9]/, 'Debe tener al menos un símbolo');
+
 export const registroSchema = z.object({
   nombre: texto(100),
   email: z.string().trim().toLowerCase().email('Email inválido'),
-  password: z.string().min(8, 'Mínimo 8 caracteres').max(72),
+  password: passwordFuerte,
 });
 
 export const loginSchema = z.object({
@@ -30,6 +38,10 @@ export const productoSchema = z.object({
   stock: entero(0).optional().default(0),
   stock_minimo: entero(0).optional().default(0),
   categoria_id: id.nullable().optional(),
+  // Solo http(s) o rutas relativas: bloquea "javascript:" y otros esquemas peligrosos
+  imagen_url: z.string().trim().max(500)
+    .regex(/^(https?:\/\/|\/)/, 'Debe ser una URL http(s) o una ruta que empiece con /')
+    .nullable().optional(),
 }).strict();
 
 // El stock NO se edita directamente: solo cambia mediante movimientos (kardex)

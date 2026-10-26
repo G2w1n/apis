@@ -10,9 +10,21 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_26_000001) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_27_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
+
+  create_table "auditorias", force: :cascade do |t|
+    t.string "accion", null: false
+    t.string "entidad", null: false
+    t.string "entidad_id", null: false
+    t.bigint "usuario_id"
+    t.string "ip"
+    t.jsonb "detalle", default: {}, null: false
+    t.datetime "created_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.index ["entidad", "entidad_id"], name: "index_auditorias_on_entidad_and_entidad_id"
+    t.index ["usuario_id"], name: "index_auditorias_on_usuario_id"
+  end
 
   create_table "categorias", force: :cascade do |t|
     t.string "nombre", null: false
@@ -39,6 +51,14 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_26_000001) do
     t.string "estado", null: false
     t.datetime "fecha", default: -> { "CURRENT_TIMESTAMP" }, null: false
     t.index ["pedido_id"], name: "index_historial_estados_on_pedido_id"
+  end
+
+  create_table "intentos_login", force: :cascade do |t|
+    t.string "clave", null: false
+    t.integer "fallos", default: 0, null: false
+    t.datetime "primer_fallo", null: false
+    t.datetime "bloqueado_hasta"
+    t.index ["clave"], name: "index_intentos_login_on_clave", unique: true
   end
 
   create_table "movimientos_stock", force: :cascade do |t|
@@ -78,6 +98,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_26_000001) do
     t.boolean "activo", default: true, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "imagen_url", limit: 500
     t.index ["categoria_id"], name: "index_productos_on_categoria_id"
     t.index ["sku"], name: "index_productos_on_sku", unique: true
     t.check_constraint "precio > 0::numeric", name: "precio_positivo"
@@ -94,6 +115,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_26_000001) do
     t.index ["email"], name: "index_usuarios_on_email", unique: true
   end
 
+  add_foreign_key "auditorias", "usuarios", on_delete: :nullify
   add_foreign_key "detalles_pedido", "pedidos", on_delete: :cascade
   add_foreign_key "detalles_pedido", "productos"
   add_foreign_key "historial_estados", "pedidos", on_delete: :cascade

@@ -7,5 +7,5 @@ import { categoriaSchema } from '../schemas.js';
 const r = Router();
 r.get('/', async (_req, res) => res.json({ data: await categorias.listar() }));
 r.post('/', autenticar, soloAdmin, validar(categoriaSchema), async (req, res) =>
-  res.status(201).json(await categorias.crear(req.body)));
+  res.status(201).json(await categorias.crear(req.body, req.usuario)));
 export default r;
