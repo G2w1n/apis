@@ -1,0 +1,10 @@
+rules_version = '2';
+// Nadie accede a Firestore directamente desde el navegador: todo pasa por la API,
+// que usa el Admin SDK (ignora estas reglas) y aplica validaciones, roles y transacciones.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

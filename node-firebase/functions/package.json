@@ -1,0 +1,27 @@
+{
+  "name": "tienda-api-firebase",
+  "version": "1.0.0",
+  "description": "API de productos, pedidos y control de stock con Node.js + Express + Firebase (Firestore)",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "seed": "node scripts/seed.js",
+    "emuladores": "firebase emulators:start --only firestore,functions,hosting",
+    "deploy": "firebase deploy --only functions,hosting,firestore"
+  },
+  "engines": {
+    "node": "22"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "express": "^5.3.0",
+    "firebase-admin": "^13.10.0",
+    "firebase-functions": "^6.6.0",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "zod": "^3.25.76"
+  }
+}
