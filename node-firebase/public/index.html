@@ -194,7 +194,7 @@ const leer = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; 
 const guardar = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
 
 const estado = {
-  base: leer('base', BACKENDS[0].url),
+  base: leer('base', EN_LA_NUBE ? BACKENDS[0].url : 'http://localhost:3000/api/v1'),
   sesiones: leer('sesiones', {}),   // token por backend: los IDs y usuarios son distintos en cada uno
   pagina: 1, carrito: [], claveIdem: crypto.randomUUID(), productos: [],
 };
@@ -296,7 +296,13 @@ $('#sesion').addEventListener('click', async (ev) => {
     guardar('sesiones', estado.sesiones);
     pintarSesion();
     toast(`Sesión iniciada como ${datos.usuario.nombre}`);
-  } catch (e) { toast(`${e.message}. ¿Ejecutaste el seed en esta API?`, 'mal'); }
+  } catch (e) {
+    // Sin status = la petición ni siquiera llegó (API apagada, URL equivocada o Render "dormido")
+    const pista = e.status === undefined
+      ? `No se pudo conectar con ${estado.base}. ¿La API está encendida y es la opción correcta del selector?`
+      : e.status === 401 ? 'Usuario o contraseña incorrectos. ¿Ejecutaste el seed en esta API?' : e.message;
+    toast(pista, 'mal');
+  }
 });
 
 $('#backend').addEventListener('change', (ev) => {
