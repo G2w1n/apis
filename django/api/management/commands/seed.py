@@ -13,8 +13,15 @@ from api.models import Categoria, DetallePedido, HistorialEstado, MovimientoStoc
 class Command(BaseCommand):
     help = 'Carga los datos de ejemplo compartidos'
 
+    def add_arguments(self, parser):
+        parser.add_argument('--si-vacio', action='store_true',
+                            help='Solo carga datos si no hay usuarios (para ejecutarlo en cada arranque en la nube)')
+
     @transaction.atomic
     def handle(self, *args, **options):
+        if options['si_vacio'] and Usuario.objects.exists():
+            self.stdout.write('La base ya tiene datos: no se ejecuta el seed')
+            return
         seed = json.loads((Path(settings.BASE_DIR).parent / 'shared' / 'seed.json').read_text(encoding='utf-8'))
         for modelo in (MovimientoStock, DetallePedido, HistorialEstado, Pedido, Producto, Categoria, Usuario):
             modelo.objects.all().delete()

@@ -7,6 +7,12 @@ import * as productos from '../src/services/productos.js';
 
 const seed = JSON.parse(await readFile(new URL('../../../shared/seed.json', import.meta.url)));
 
+// --si-vacio: no toca nada si ya hay usuarios (para ejecutarlo en cada arranque en la nube)
+if (process.argv.includes('--si-vacio') && !(await col.usuarios.limit(1).get()).empty) {
+  console.log('Firestore ya tiene datos: no se ejecuta el seed');
+  process.exit(0);
+}
+
 for (const c of Object.values(col)) await db.recursiveDelete(c);
 
 const ids = {};

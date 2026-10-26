@@ -6,13 +6,18 @@ import { config } from './config.js';
 // Credenciales:
 //  - Emulador (FIRESTORE_EMULATOR_HOST): no necesita ninguna.
 //  - Cloud Functions: las pone Google automáticamente.
-//  - Tu PC contra Firestore real: descarga la clave de la cuenta de servicio como functions/serviceAccount.json
-const claveLocal = new URL('../serviceAccount.json', import.meta.url);
-const opciones = { projectId: config.proyectoId };
-if (!process.env.FIRESTORE_EMULATOR_HOST && existsSync(claveLocal)) {
-  const clave = JSON.parse(readFileSync(claveLocal, 'utf8'));
-  Object.assign(opciones, { credential: cert(clave), projectId: clave.project_id });
+//  - Otro servidor (Render, etc.): pega el JSON de la cuenta de servicio en la variable FIREBASE_SERVICE_ACCOUNT
+//  - Tu PC contra Firestore real: guarda ese JSON como functions/serviceAccount.json
+function leerClave() {
+  if (process.env.FIRESTORE_EMULATOR_HOST) return null;
+  if (process.env.FIREBASE_SERVICE_ACCOUNT) return JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+  const archivo = new URL('../serviceAccount.json', import.meta.url);
+  return existsSync(archivo) ? JSON.parse(readFileSync(archivo, 'utf8')) : null;
 }
+
+const opciones = { projectId: config.proyectoId };
+const clave = leerClave();
+if (clave) Object.assign(opciones, { credential: cert(clave), projectId: clave.project_id });
 if (!getApps().length) initializeApp(opciones);
 
 export const db = getFirestore();

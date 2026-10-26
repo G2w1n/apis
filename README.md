@@ -193,6 +193,27 @@ npm run benchmark        # compara las 3 APIs y actualiza docs/benchmark.md
 Para el panel, abre `node-firebase/public/index.html` (o `npm run emuladores` en `node-firebase/functions` y entra a http://localhost:5000),
 elige la API en el selector superior y entra como admin.
 
+### Publicar en la nube con Render (gratis)
+El archivo [`render.yaml`](render.yaml) crea todo de una vez: las 3 APIs, el panel y la base PostgreSQL.
+
+1. Entra a https://render.com y regístrate con tu cuenta de **GitHub**.
+2. **New → Blueprint** → elige el repositorio `G2w1n/apis` → **Apply**.
+3. Render te pedirá la variable `FIREBASE_SERVICE_ACCOUNT` de la API Express: en la consola de Firebase ve a
+   ⚙️ Configuración del proyecto → **Cuentas de servicio → Generar nueva clave privada**, abre el archivo descargado
+   y pega **todo su contenido**.
+4. Espera a que los 4 servicios queden en verde (el primer despliegue tarda unos minutos). Cada API carga sola los datos de ejemplo.
+
+| Servicio | URL |
+|---|---|
+| Panel web | https://g2w1n-tienda-panel.onrender.com |
+| Express + Firestore | https://g2w1n-tienda-express.onrender.com/api/v1/productos |
+| Django + PostgreSQL | https://g2w1n-tienda-django.onrender.com/api/v1/productos · admin: `/admin/` |
+| Rails + PostgreSQL | https://g2w1n-tienda-rails.onrender.com/api/v1/productos |
+
+> Si Render asigna otra URL (cuando el nombre ya está ocupado), actualízala en `BACKENDS` dentro de `node-firebase/public/index.html`.
+> En el plan gratuito los servicios se "duermen" tras 15 min sin uso: la primera visita tarda ~1 min. Ábrelos unos minutos
+> antes de exponer. La base PostgreSQL gratuita de Render caduca a los 30 días.
+
 ### Desplegar en Firebase (proyecto `apip-e0b09`)
 El repositorio ya apunta al proyecto `apip-e0b09` (`node-firebase/.firebaserc`). Cloud Functions y Firestore usan la
 región **southamerica-east1** (São Paulo).

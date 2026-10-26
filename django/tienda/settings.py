@@ -1,12 +1,16 @@
 """Configuración del proyecto Django: API de tienda (productos, pedidos y stock)."""
 import os
 from pathlib import Path
+from urllib.parse import unquote, urlparse
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'solo-para-desarrollo-cambiar-en-produccion')
 DEBUG = os.environ.get('DJANGO_DEBUG', 'true').lower() == 'true'
 ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', '*').split(',')
+# Necesario para iniciar sesión en /admin/ cuando la app está publicada con HTTPS
+CSRF_TRUSTED_ORIGINS = os.environ.get('DJANGO_CSRF_TRUSTED_ORIGINS', 'https://*.onrender.com').split(',')
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -23,6 +27,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # sirve el CSS del panel /admin/ en producción
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -63,6 +68,17 @@ DATABASES = {
     }
 }
 
+# En la nube (Render, Railway...) la conexión llega como DATABASE_URL=postgresql://usuario:clave@host:puerto/base
+if os.environ.get('DATABASE_URL'):
+    url = urlparse(os.environ['DATABASE_URL'])
+    DATABASES['default'].update({
+        'NAME': url.path.lstrip('/'),
+        'USER': unquote(url.username or ''),
+        'PASSWORD': unquote(url.password or ''),
+        'HOST': url.hostname,
+        'PORT': str(url.port or 5432),
+    })
+
 AUTH_USER_MODEL = 'api.Usuario'
 
 AUTH_PASSWORD_VALIDATORS = []  # la longitud mínima se valida en el serializer (igual que en las otras APIs)
@@ -74,6 +90,10 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+STORAGES = {
+    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    'staticfiles': {'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'},
+}
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CORS_ALLOW_ALL_ORIGINS = True

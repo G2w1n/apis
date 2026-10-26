@@ -8,6 +8,7 @@
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
     "seed": "node scripts/seed.js",
+    "start:nube": "node scripts/seed.js --si-vacio && node src/server.js",
     "emuladores": "firebase emulators:start --project demo-tienda",
     "deploy": "firebase deploy --only functions,hosting,firestore"
   },

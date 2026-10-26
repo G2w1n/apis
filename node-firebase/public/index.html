@@ -176,17 +176,25 @@
 <div id="toast"></div>
 
 <script>
+// En la nube (Render) las URLs son públicas; en local, localhost. Si Render te asignó otra URL, cámbiala aquí.
+const EN_LA_NUBE = !['localhost', '127.0.0.1', ''].includes(location.hostname);
+const EN_FIREBASE = /\.(web\.app|firebaseapp\.com)$/.test(location.hostname) || location.port === '5000';
 const BACKENDS = [
-  { nombre: 'Este servidor (Firebase)', url: `${location.origin}/api/v1` },
-  { nombre: 'Express + Firestore (local)', url: 'http://localhost:3000/api/v1' },
-  { nombre: 'Django + PostgreSQL (local)', url: 'http://localhost:8000/api/v1' },
-  { nombre: 'Rails + PostgreSQL (local)', url: 'http://localhost:3001/api/v1' },
+  ...(EN_FIREBASE ? [{ nombre: 'Este servidor (Firebase)', url: `${location.origin}/api/v1` }] : []),
+  { nombre: 'Express + Firestore (Render)', url: 'https://g2w1n-tienda-express.onrender.com/api/v1' },
+  { nombre: 'Django + PostgreSQL (Render)', url: 'https://g2w1n-tienda-django.onrender.com/api/v1' },
+  { nombre: 'Rails + PostgreSQL (Render)', url: 'https://g2w1n-tienda-rails.onrender.com/api/v1' },
+  ...(EN_LA_NUBE ? [] : [
+    { nombre: 'Express + Firestore (local)', url: 'http://localhost:3000/api/v1' },
+    { nombre: 'Django + PostgreSQL (local)', url: 'http://localhost:8000/api/v1' },
+    { nombre: 'Rails + PostgreSQL (local)', url: 'http://localhost:3001/api/v1' },
+  ]),
 ];
 const leer = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
 const guardar = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
 
 const estado = {
-  base: leer('base', location.protocol.startsWith('http') ? BACKENDS[0].url : BACKENDS[1].url),
+  base: leer('base', BACKENDS[0].url),
   sesiones: leer('sesiones', {}),   // token por backend: los IDs y usuarios son distintos en cada uno
   pagina: 1, carrito: [], claveIdem: crypto.randomUUID(), productos: [],
 };
@@ -197,12 +205,24 @@ const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 const soles = (n) => `S/ ${Number(n).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const fecha = (iso) => new Date(iso).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'medium' });
 
+// Si el usuario cambió de API mientras esta petición seguía en curso, su respuesta se descarta
+// (una promesa que nunca se resuelve) para que no pinte datos de la API anterior.
+const descartada = () => new Promise(() => {});
+
 async function api(metodo, ruta, body, headers = {}) {
-  const res = await fetch(estado.base + ruta, {
-    method: metodo,
-    headers: { ...(body && { 'Content-Type': 'application/json' }), ...(sesion() && { Authorization: `Bearer ${sesion().token}` }), ...headers },
-    body: body && JSON.stringify(body),
-  });
+  const base = estado.base;
+  let res;
+  try {
+    res = await fetch(base + ruta, {
+      method: metodo,
+      headers: { ...(body && { 'Content-Type': 'application/json' }), ...(sesion() && { Authorization: `Bearer ${sesion().token}` }), ...headers },
+      body: body && JSON.stringify(body),
+    });
+  } catch (e) {
+    if (base !== estado.base) return descartada();
+    throw e;
+  }
+  if (base !== estado.base) return descartada();
   const datos = res.status === 204 ? null : await res.json().catch(() => null);
   if (!res.ok) {
     if (res.status === 401 && sesion()) { delete estado.sesiones[estado.base]; guardar('sesiones', estado.sesiones); pintarSesion(); }
@@ -232,7 +252,7 @@ function detalleError(e) {
 // ---------- Backend y sesión ----------
 function pintarBackends() {
   const sel = $('#backend');
-  const opciones = location.protocol.startsWith('http') ? BACKENDS : BACKENDS.slice(1);
+  const opciones = BACKENDS;
   sel.innerHTML = opciones.map((b) => `<option value="${esc(b.url)}">${esc(b.nombre)}</option>`).join('');
   if (!opciones.some((b) => b.url === estado.base)) estado.base = opciones[0].url;
   sel.value = estado.base;
@@ -240,6 +260,9 @@ function pintarBackends() {
 
 async function verificarSalud() {
   const punto = $('#salud');
+  punto.className = 'punto';
+  // El plan gratuito de Render "duerme" el servidor tras 15 min sin uso; la primera petición lo despierta
+  $('#info-backend').textContent = estado.base.includes('onrender.com') ? 'conectando… (Render puede tardar ~1 min en despertar)' : 'conectando…';
   try {
     const { datos } = await api('GET', '/health');
     punto.className = 'punto ok';
