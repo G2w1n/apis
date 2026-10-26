@@ -1,0 +1,533 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Panel Tienda</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E🛒%3C/text%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --texto: #1c2430; --suave: #5d6b7e; --borde: #e2e6ec;
+    --acento: #2f6fed; --acento-texto: #ffffff; --ok: #1f9d55; --ok-bg: #e5f6ec; --mal: #d64545; --mal-bg: #fbeaea;
+    --aviso: #b7791f; --aviso-bg: #fdf3e1; --radio: 10px; --sombra: 0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.08);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f141b; --panel: #171e27; --texto: #e6ebf2; --suave: #93a1b5; --borde: #2a3441;
+      --acento: #5b8fff; --ok: #46c37b; --ok-bg: #173325; --mal: #f07171; --mal-bg: #3a1d1d;
+      --aviso: #e0a84a; --aviso-bg: #3a2d14; --sombra: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--texto); }
+  header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; padding: 12px 20px; background: var(--panel); border-bottom: 1px solid var(--borde); position: sticky; top: 0; z-index: 5; }
+  header h1 { font-size: 18px; margin: 0; }
+  .fila { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .punto { width: 10px; height: 10px; border-radius: 50%; background: var(--suave); display: inline-block; }
+  .punto.ok { background: var(--ok); } .punto.mal { background: var(--mal); }
+  nav { display: flex; gap: 4px; padding: 10px 20px 0; overflow-x: auto; }
+  nav button { background: none; border: 0; padding: 8px 14px; border-radius: 8px 8px 0 0; color: var(--suave); cursor: pointer; font: inherit; white-space: nowrap; }
+  nav button.activo { background: var(--panel); color: var(--texto); font-weight: 600; box-shadow: var(--sombra); }
+  main { padding: 0 20px 40px; max-width: 1200px; }
+  section.vista { display: none; background: var(--panel); border-radius: 0 var(--radio) var(--radio) var(--radio); padding: 20px; box-shadow: var(--sombra); }
+  section.vista.activa { display: block; }
+  h2 { font-size: 17px; margin: 0 0 12px; } h3 { font-size: 15px; margin: 20px 0 8px; }
+  input, select, button { font: inherit; color: inherit; }
+  input, select { background: var(--bg); border: 1px solid var(--borde); border-radius: 8px; padding: 7px 10px; min-width: 0; }
+  button.btn { background: var(--acento); color: var(--acento-texto); border: 0; border-radius: 8px; padding: 8px 14px; cursor: pointer; font-weight: 600; }
+  button.sec { background: transparent; color: var(--acento); border: 1px solid var(--borde); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+  button.peligro { color: var(--mal); }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  .tabla { width: 100%; overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--borde); vertical-align: middle; }
+  th { color: var(--suave); font-weight: 600; font-size: 13px; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .chip { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; background: var(--bg); color: var(--suave); }
+  .chip.ok { background: var(--ok-bg); color: var(--ok); } .chip.mal { background: var(--mal-bg); color: var(--mal); } .chip.aviso { background: var(--aviso-bg); color: var(--aviso); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+  .kpi { border: 1px solid var(--borde); border-radius: var(--radio); padding: 14px; }
+  .kpi b { display: block; font-size: 22px; font-variant-numeric: tabular-nums; }
+  .kpi span { color: var(--suave); font-size: 13px; }
+  .dos { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+  @media (max-width: 860px) { .dos { grid-template-columns: 1fr; } }
+  .caja { border: 1px solid var(--borde); border-radius: var(--radio); padding: 14px; }
+  .form { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; align-items: end; }
+  .form label { display: grid; gap: 4px; font-size: 13px; color: var(--suave); }
+  .msg { padding: 10px 12px; border-radius: 8px; margin: 10px 0; font-size: 14px; }
+  .msg.ok { background: var(--ok-bg); color: var(--ok); } .msg.mal { background: var(--mal-bg); color: var(--mal); }
+  .vacio { color: var(--suave); padding: 16px 0; }
+  .barra { height: 8px; border-radius: 4px; background: var(--acento); }
+  .cuadros { display: grid; grid-template-columns: repeat(auto-fill, minmax(42px, 1fr)); gap: 6px; margin: 14px 0; }
+  .cuadro { aspect-ratio: 1; border-radius: 8px; background: var(--bg); border: 1px solid var(--borde); display: grid; place-items: center; font-size: 12px; font-weight: 700; }
+  .cuadro.ok { background: var(--ok); color: #fff; border-color: transparent; } .cuadro.mal { background: var(--mal); color: #fff; border-color: transparent; }
+  .muted { color: var(--suave); font-size: 13px; }
+  #toast { position: fixed; bottom: 16px; right: 16px; max-width: 360px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🛒 Panel Tienda</h1>
+  <div class="fila">
+    <span class="punto" id="salud" title="Estado de la API"></span>
+    <select id="backend" aria-label="API"></select>
+    <span class="muted" id="info-backend"></span>
+  </div>
+  <div class="fila" id="sesion"></div>
+</header>
+
+<nav id="tabs">
+  <button data-vista="catalogo" class="activo">Catálogo</button>
+  <button data-vista="pedidos">Pedidos</button>
+  <button data-vista="stock" data-admin>Stock y kardex</button>
+  <button data-vista="reporte" data-admin>Reporte</button>
+  <button data-vista="demo" data-admin>⚡ Demo concurrencia</button>
+</nav>
+
+<main>
+  <section class="vista activa" id="catalogo">
+    <div class="dos">
+      <div>
+        <div class="fila" style="margin-bottom:12px">
+          <input id="buscar" placeholder="Buscar por nombre o SKU" style="flex:1">
+          <select id="filtro-cat"><option value="">Todas las categorías</option></select>
+          <select id="orden">
+            <option value="nombre">Nombre</option><option value="precio">Precio ↑</option>
+            <option value="-precio">Precio ↓</option><option value="stock">Stock ↑</option>
+          </select>
+        </div>
+        <div class="tabla"><table><thead><tr><th>SKU</th><th>Producto</th><th class="num">Precio</th><th class="num">Stock</th><th></th></tr></thead><tbody id="productos"></tbody></table></div>
+        <div class="fila" style="margin-top:10px"><button class="sec" id="prev">← Anterior</button><span class="muted" id="pagina"></span><button class="sec" id="next">Siguiente →</button></div>
+
+        <div data-admin>
+          <h3>Nuevo producto</h3>
+          <form class="form" id="form-producto">
+            <label>SKU<input name="sku" required></label>
+            <label>Nombre<input name="nombre" required></label>
+            <label>Precio<input name="precio" type="number" step="0.01" min="0.01" required></label>
+            <label>Stock inicial<input name="stock" type="number" min="0" value="10"></label>
+            <label>Stock mínimo<input name="stock_minimo" type="number" min="0" value="3"></label>
+            <label>Categoría<select name="categoria_id" id="form-cat"></select></label>
+            <button class="btn">Crear</button>
+          </form>
+        </div>
+      </div>
+      <aside class="caja">
+        <h2>Carrito</h2>
+        <div id="carrito"></div>
+        <div id="msg-carrito"></div>
+      </aside>
+    </div>
+  </section>
+
+  <section class="vista" id="pedidos">
+    <div class="fila" style="justify-content:space-between;margin-bottom:12px">
+      <h2 style="margin:0">Pedidos</h2>
+      <select id="filtro-estado"><option value="">Todos los estados</option><option>pendiente</option><option>pagado</option><option>enviado</option><option>entregado</option><option>cancelado</option></select>
+    </div>
+    <div class="tabla"><table><thead><tr><th>#</th><th>Fecha</th><th>Items</th><th class="num">Total</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="lista-pedidos"></tbody></table></div>
+  </section>
+
+  <section class="vista" id="stock">
+    <div class="dos">
+      <div>
+        <h2>Kardex</h2>
+        <select id="kardex-producto" style="width:100%"></select>
+        <div class="tabla"><table><thead><tr><th>Fecha</th><th>Tipo</th><th class="num">Cantidad</th><th class="num">Saldo</th><th>Motivo</th></tr></thead><tbody id="kardex"></tbody></table></div>
+      </div>
+      <div>
+        <div class="caja">
+          <h2>Registrar movimiento</h2>
+          <form class="form" id="form-mov" style="grid-template-columns:1fr">
+            <label>Producto<select name="producto_id" id="mov-producto"></select></label>
+            <label>Tipo<select name="tipo"><option value="entrada">Entrada (compra)</option><option value="salida">Salida (merma)</option></select></label>
+            <label>Cantidad<input name="cantidad" type="number" min="1" value="10" required></label>
+            <label>Motivo<input name="motivo" value="Compra a proveedor" required></label>
+            <button class="btn">Registrar</button>
+          </form>
+          <div id="msg-mov"></div>
+        </div>
+        <h3>⚠️ Alertas de stock bajo</h3>
+        <div id="alertas"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="vista" id="reporte">
+    <h2>Resumen</h2>
+    <div class="grid" id="kpis"></div>
+    <h3>Más vendidos</h3>
+    <div id="vendidos"></div>
+  </section>
+
+  <section class="vista" id="demo">
+    <h2>Prueba de sobreventa en vivo</h2>
+    <p class="muted">Crea un producto con poco stock y lanza muchas compras <b>al mismo tiempo</b>. Una API sin control de
+      concurrencia vendería más unidades de las que existen. Aquí solo deben aprobarse tantas como haya en stock.</p>
+    <form class="form" id="form-demo">
+      <label>Stock del producto<input name="stock" type="number" min="1" max="50" value="5"></label>
+      <label>Compras simultáneas<input name="compras" type="number" min="2" max="100" value="20"></label>
+      <button class="btn">Lanzar compras</button>
+    </form>
+    <div class="cuadros" id="cuadros"></div>
+    <div id="resultado-demo"></div>
+  </section>
+</main>
+<div id="toast"></div>
+
+<script>
+const BACKENDS = [
+  { nombre: 'Este servidor (Firebase)', url: `${location.origin}/api/v1` },
+  { nombre: 'Express + Firestore (local)', url: 'http://localhost:3000/api/v1' },
+  { nombre: 'Django + PostgreSQL (local)', url: 'http://localhost:8000/api/v1' },
+  { nombre: 'Rails + PostgreSQL (local)', url: 'http://localhost:3001/api/v1' },
+];
+const leer = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
+const guardar = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+
+const estado = {
+  base: leer('base', location.protocol.startsWith('http') ? BACKENDS[0].url : BACKENDS[1].url),
+  sesiones: leer('sesiones', {}),   // token por backend: los IDs y usuarios son distintos en cada uno
+  pagina: 1, carrito: [], claveIdem: crypto.randomUUID(), productos: [],
+};
+const sesion = () => estado.sesiones[estado.base];
+const esAdmin = () => sesion()?.usuario.rol === 'admin';
+const $ = (s) => document.querySelector(s);
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const soles = (n) => `S/ ${Number(n).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const fecha = (iso) => new Date(iso).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'medium' });
+
+async function api(metodo, ruta, body, headers = {}) {
+  const res = await fetch(estado.base + ruta, {
+    method: metodo,
+    headers: { ...(body && { 'Content-Type': 'application/json' }), ...(sesion() && { Authorization: `Bearer ${sesion().token}` }), ...headers },
+    body: body && JSON.stringify(body),
+  });
+  const datos = res.status === 204 ? null : await res.json().catch(() => null);
+  if (!res.ok) {
+    if (res.status === 401 && sesion()) { delete estado.sesiones[estado.base]; guardar('sesiones', estado.sesiones); pintarSesion(); }
+    const e = new Error(datos?.error?.mensaje || `Error ${res.status}`);
+    Object.assign(e, { status: res.status, codigo: datos?.error?.codigo, detalles: datos?.error?.detalles });
+    throw e;
+  }
+  return { datos, headers: res.headers, status: res.status };
+}
+
+function toast(texto, tipo = 'ok') {
+  const el = document.createElement('div');
+  el.className = `msg ${tipo}`;
+  el.textContent = texto;
+  $('#toast').append(el);
+  setTimeout(() => el.remove(), 4000);
+}
+
+function detalleError(e) {
+  if (e.codigo === 'STOCK_INSUFICIENTE') {
+    return e.detalles.map((d) => `${esc(d.nombre)}: pediste ${d.solicitado}, hay ${d.disponible}`).join('<br>');
+  }
+  if (e.codigo === 'VALIDACION' && e.detalles) return e.detalles.map((d) => `${esc(d.campo)}: ${esc(d.mensaje)}`).join('<br>');
+  return esc(e.message);
+}
+
+// ---------- Backend y sesión ----------
+function pintarBackends() {
+  const sel = $('#backend');
+  const opciones = location.protocol.startsWith('http') ? BACKENDS : BACKENDS.slice(1);
+  sel.innerHTML = opciones.map((b) => `<option value="${esc(b.url)}">${esc(b.nombre)}</option>`).join('');
+  if (!opciones.some((b) => b.url === estado.base)) estado.base = opciones[0].url;
+  sel.value = estado.base;
+}
+
+async function verificarSalud() {
+  const punto = $('#salud');
+  try {
+    const { datos } = await api('GET', '/health');
+    punto.className = 'punto ok';
+    $('#info-backend').textContent = `${datos.framework} · ${datos.base_datos}`;
+  } catch {
+    punto.className = 'punto mal';
+    $('#info-backend').textContent = 'sin conexión';
+  }
+}
+
+function pintarSesion() {
+  const s = sesion();
+  $('#sesion').innerHTML = s
+    ? `<span>${esc(s.usuario.nombre)} <span class="chip ${s.usuario.rol === 'admin' ? 'aviso' : ''}">${esc(s.usuario.rol)}</span></span><button class="sec" id="salir">Salir</button>`
+    : `<button class="sec" data-login="admin">Entrar como admin</button><button class="sec" data-login="cliente">Entrar como cliente</button>`;
+  document.querySelectorAll('[data-admin]').forEach((el) => { el.style.display = esAdmin() ? '' : 'none'; });
+  const activa = document.querySelector('nav button.activo');
+  if (activa?.hasAttribute('data-admin') && !esAdmin()) mostrarVista('catalogo');
+  pintarCarrito();
+}
+
+const CREDENCIALES = { admin: ['admin@tienda.pe', 'Admin123*'], cliente: ['cliente@tienda.pe', 'Cliente123*'] };
+$('#sesion').addEventListener('click', async (ev) => {
+  if (ev.target.id === 'salir') { delete estado.sesiones[estado.base]; guardar('sesiones', estado.sesiones); return pintarSesion(); }
+  const rol = ev.target.dataset.login;
+  if (!rol) return;
+  try {
+    const [email, password] = CREDENCIALES[rol];
+    const { datos } = await api('POST', '/auth/login', { email, password });
+    estado.sesiones[estado.base] = datos;
+    guardar('sesiones', estado.sesiones);
+    pintarSesion();
+    toast(`Sesión iniciada como ${datos.usuario.nombre}`);
+  } catch (e) { toast(`${e.message}. ¿Ejecutaste el seed en esta API?`, 'mal'); }
+});
+
+$('#backend').addEventListener('change', (ev) => {
+  estado.base = ev.target.value;
+  guardar('base', estado.base);
+  estado.carrito = []; estado.pagina = 1;
+  iniciar();
+});
+
+// ---------- Navegación ----------
+function mostrarVista(id) {
+  document.querySelectorAll('nav button').forEach((b) => b.classList.toggle('activo', b.dataset.vista === id));
+  document.querySelectorAll('section.vista').forEach((s) => s.classList.toggle('activa', s.id === id));
+  ({ catalogo: cargarProductos, pedidos: cargarPedidos, stock: cargarStock, reporte: cargarReporte })[id]?.();
+}
+$('#tabs').addEventListener('click', (ev) => ev.target.dataset.vista && mostrarVista(ev.target.dataset.vista));
+
+// ---------- Catálogo ----------
+async function cargarCategorias() {
+  try {
+    const { datos } = await api('GET', '/categorias');
+    const opts = datos.data.map((c) => `<option value="${esc(c.id)}">${esc(c.nombre)}</option>`).join('');
+    $('#filtro-cat').innerHTML = `<option value="">Todas las categorías</option>${opts}`;
+    $('#form-cat').innerHTML = `<option value="">(sin categoría)</option>${opts}`;
+  } catch {}
+}
+
+async function cargarProductos() {
+  const qs = new URLSearchParams({ page: estado.pagina, limit: 8, orden: $('#orden').value });
+  if ($('#buscar').value) qs.set('q', $('#buscar').value);
+  if ($('#filtro-cat').value) qs.set('categoria', $('#filtro-cat').value);
+  try {
+    const { datos } = await api('GET', `/productos?${qs}`);
+    estado.productos = datos.data;
+    $('#productos').innerHTML = datos.data.map((p) => `
+      <tr>
+        <td class="muted">${esc(p.sku)}</td>
+        <td>${esc(p.nombre)}<div class="muted">${esc(p.categoria?.nombre || '')}</div></td>
+        <td class="num">${soles(p.precio)}</td>
+        <td class="num"><span class="chip ${p.stock === 0 ? 'mal' : p.bajo_stock ? 'aviso' : 'ok'}">${p.stock}</span></td>
+        <td><button class="sec" data-agregar="${esc(p.id)}" ${p.stock === 0 ? 'disabled' : ''}>Agregar</button>
+            ${esAdmin() ? `<button class="sec peligro" data-borrar="${esc(p.id)}" title="Retirar del catálogo">✕</button>` : ''}</td>
+      </tr>`).join('') || '<tr><td colspan="5" class="vacio">Sin productos</td></tr>';
+    $('#pagina').textContent = `Página ${datos.meta.page} de ${Math.max(1, datos.meta.paginas)} · ${datos.meta.total} productos`;
+    $('#prev').disabled = datos.meta.page <= 1;
+    $('#next').disabled = datos.meta.page >= datos.meta.paginas;
+  } catch (e) {
+    $('#productos').innerHTML = `<tr><td colspan="5" class="vacio">No se pudo conectar: ${esc(e.message)}</td></tr>`;
+  }
+}
+
+let espera;
+$('#buscar').addEventListener('input', () => { clearTimeout(espera); espera = setTimeout(() => { estado.pagina = 1; cargarProductos(); }, 300); });
+$('#filtro-cat').addEventListener('change', () => { estado.pagina = 1; cargarProductos(); });
+$('#orden').addEventListener('change', cargarProductos);
+$('#prev').addEventListener('click', () => { estado.pagina--; cargarProductos(); });
+$('#next').addEventListener('click', () => { estado.pagina++; cargarProductos(); });
+
+$('#productos').addEventListener('click', async (ev) => {
+  const id = ev.target.dataset.agregar;
+  if (id) {
+    const p = estado.productos.find((x) => String(x.id) === id);
+    const item = estado.carrito.find((x) => String(x.producto.id) === id);
+    item ? item.cantidad++ : estado.carrito.push({ producto: p, cantidad: 1 });
+    return pintarCarrito();
+  }
+  const borrar = ev.target.dataset.borrar;
+  if (borrar && confirm('¿Retirar este producto del catálogo?')) {
+    try { await api('DELETE', `/productos/${borrar}`); toast('Producto retirado'); cargarProductos(); } catch (e) { toast(e.message, 'mal'); }
+  }
+});
+
+$('#form-producto').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const f = Object.fromEntries(new FormData(ev.target));
+  const body = { sku: f.sku, nombre: f.nombre, precio: Number(f.precio), stock: Number(f.stock || 0), stock_minimo: Number(f.stock_minimo || 0) };
+  if (f.categoria_id) body.categoria_id = f.categoria_id;
+  try {
+    await api('POST', '/productos', body);
+    toast('Producto creado');
+    ev.target.reset();
+    cargarProductos();
+  } catch (e) { toast(e.detalles ? `${e.message}: ${e.detalles.map((d) => d.campo).join(', ')}` : e.message, 'mal'); }
+});
+
+// ---------- Carrito ----------
+function pintarCarrito() {
+  const total = estado.carrito.reduce((s, i) => s + Math.round(i.producto.precio * 100) * i.cantidad, 0) / 100;
+  $('#carrito').innerHTML = estado.carrito.length ? `
+    <table><tbody>${estado.carrito.map((i, idx) => `
+      <tr><td>${esc(i.producto.nombre)}</td>
+          <td class="num"><input type="number" min="1" value="${i.cantidad}" data-cant="${idx}" style="width:64px"></td>
+          <td><button class="sec peligro" data-quitar="${idx}">✕</button></td></tr>`).join('')}
+    </tbody></table>
+    <p class="fila" style="justify-content:space-between"><b>Total</b><b>${soles(total)}</b></p>
+    <button class="btn" id="confirmar" style="width:100%" ${sesion() ? '' : 'disabled'}>${sesion() ? 'Confirmar pedido' : 'Inicia sesión para comprar'}</button>
+    <p class="muted">Idempotency-Key: <code>${estado.claveIdem.slice(0, 8)}…</code> — prueba hacer doble clic: no se duplica.</p>`
+    : '<p class="vacio">Agrega productos desde el catálogo.</p>';
+}
+
+$('#carrito').addEventListener('input', (ev) => {
+  const idx = ev.target.dataset.cant;
+  if (idx !== undefined) { estado.carrito[idx].cantidad = Math.max(1, parseInt(ev.target.value, 10) || 1); }
+});
+$('#carrito').addEventListener('change', () => pintarCarrito());
+$('#carrito').addEventListener('click', async (ev) => {
+  if (ev.target.dataset.quitar !== undefined) { estado.carrito.splice(ev.target.dataset.quitar, 1); return pintarCarrito(); }
+  if (ev.target.id !== 'confirmar') return;
+  const items = estado.carrito.map((i) => ({ producto_id: i.producto.id, cantidad: i.cantidad }));
+  try {
+    const { datos, status } = await api('POST', '/pedidos', { items }, { 'Idempotency-Key': estado.claveIdem });
+    $('#msg-carrito').innerHTML = `<div class="msg ok">${status === 200 ? 'Pedido ya registrado (petición repetida)' : 'Pedido creado'} #${esc(String(datos.id).slice(0, 8))} · ${soles(datos.total)}</div>`;
+    estado.carrito = []; estado.claveIdem = crypto.randomUUID();
+    pintarCarrito(); cargarProductos();
+  } catch (e) {
+    $('#msg-carrito').innerHTML = `<div class="msg mal"><b>${esc(e.message)}</b><br>${detalleError(e)}</div>`;
+  }
+});
+
+// ---------- Pedidos ----------
+const COLOR_ESTADO = { pendiente: 'aviso', pagado: '', enviado: '', entregado: 'ok', cancelado: 'mal' };
+const ACCIONES = { pendiente: [['pagado', 'Marcar pagado']], pagado: [['enviado', 'Enviar']], enviado: [['entregado', 'Entregado']] };
+
+async function cargarPedidos() {
+  if (!sesion()) { $('#lista-pedidos').innerHTML = '<tr><td colspan="6" class="vacio">Inicia sesión para ver pedidos.</td></tr>'; return; }
+  const qs = new URLSearchParams({ limit: 50 });
+  if ($('#filtro-estado').value) qs.set('estado', $('#filtro-estado').value);
+  try {
+    const { datos } = await api('GET', `/pedidos?${qs}`);
+    $('#lista-pedidos').innerHTML = datos.data.map((p) => `
+      <tr>
+        <td class="muted">${esc(String(p.id).slice(0, 8))}</td>
+        <td>${fecha(p.created_at)}</td>
+        <td>${p.items.map((i) => `${i.cantidad}× ${esc(i.nombre)}`).join('<br>')}</td>
+        <td class="num">${soles(p.total)}</td>
+        <td><span class="chip ${COLOR_ESTADO[p.estado]}">${esc(p.estado)}</span></td>
+        <td class="fila">
+          ${esAdmin() ? (ACCIONES[p.estado] || []).map(([e, t]) => `<button class="sec" data-pedido="${esc(p.id)}" data-estado="${e}">${t}</button>`).join('') : ''}
+          ${['pendiente', 'pagado'].includes(p.estado) ? `<button class="sec peligro" data-cancelar="${esc(p.id)}">Cancelar</button>` : ''}
+        </td>
+      </tr>`).join('') || '<tr><td colspan="6" class="vacio">No hay pedidos.</td></tr>';
+  } catch (e) { toast(e.message, 'mal'); }
+}
+$('#filtro-estado').addEventListener('change', cargarPedidos);
+$('#lista-pedidos').addEventListener('click', async (ev) => {
+  const { pedido, estado: nuevo, cancelar } = ev.target.dataset;
+  try {
+    if (pedido) { await api('PATCH', `/pedidos/${pedido}/estado`, { estado: nuevo }); toast(`Pedido → ${nuevo}`); }
+    else if (cancelar) { await api('POST', `/pedidos/${cancelar}/cancelar`); toast('Pedido cancelado: el stock fue devuelto'); }
+    else return;
+    cargarPedidos();
+  } catch (e) { toast(e.message, 'mal'); }
+});
+
+// ---------- Stock ----------
+async function cargarStock() {
+  try {
+    const { datos } = await api('GET', '/productos?limit=100');
+    const opts = datos.data.map((p) => `<option value="${esc(p.id)}">${esc(p.sku)} · ${esc(p.nombre)} (stock ${p.stock})</option>`).join('');
+    const actual = $('#kardex-producto').value;
+    $('#kardex-producto').innerHTML = opts;
+    $('#mov-producto').innerHTML = opts;
+    if (actual) $('#kardex-producto').value = actual;
+    cargarKardex();
+    const { datos: al } = await api('GET', '/stock/alertas');
+    $('#alertas').innerHTML = al.data.length ? `<table><tbody>${al.data.map((p) => `
+      <tr><td>${esc(p.nombre)}</td><td class="num"><span class="chip ${p.stock === 0 ? 'mal' : 'aviso'}">${p.stock} / mín ${p.stock_minimo}</span></td></tr>`).join('')}</tbody></table>`
+      : '<p class="vacio">Todo el inventario está sobre su mínimo.</p>';
+  } catch (e) { toast(e.message, 'mal'); }
+}
+
+async function cargarKardex() {
+  const id = $('#kardex-producto').value;
+  if (!id) return;
+  const { datos } = await api('GET', `/stock/movimientos?producto_id=${encodeURIComponent(id)}&limit=50`);
+  $('#kardex').innerHTML = datos.data.map((m) => `
+    <tr><td>${fecha(m.created_at)}</td>
+        <td><span class="chip ${m.tipo === 'entrada' ? 'ok' : 'mal'}">${m.tipo}</span></td>
+        <td class="num">${m.tipo === 'entrada' ? '+' : '−'}${m.cantidad}</td>
+        <td class="num"><b>${m.stock_resultante}</b></td>
+        <td class="muted">${esc(m.motivo)}</td></tr>`).join('') || '<tr><td colspan="5" class="vacio">Sin movimientos</td></tr>';
+}
+$('#kardex-producto').addEventListener('change', cargarKardex);
+$('#form-mov').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const f = Object.fromEntries(new FormData(ev.target));
+  try {
+    const { datos } = await api('POST', '/stock/movimientos', { ...f, cantidad: Number(f.cantidad) });
+    $('#msg-mov').innerHTML = `<div class="msg ok">Registrado. Nuevo saldo: <b>${datos.stock_resultante}</b></div>`;
+    $('#kardex-producto').value = f.producto_id;
+    cargarStock();
+  } catch (e) { $('#msg-mov').innerHTML = `<div class="msg mal">${detalleError(e)}</div>`; }
+});
+
+// ---------- Reporte ----------
+async function cargarReporte() {
+  try {
+    const { datos: r } = await api('GET', '/stock/reporte');
+    const kpis = [
+      ['Ingresos', soles(r.ingresos_totales)], ['Valor del inventario', soles(r.valor_inventario)],
+      ['Productos activos', r.total_productos], ['Unidades en stock', r.unidades_en_stock],
+      ['Bajo stock mínimo', r.productos_bajo_stock],
+      ...Object.entries(r.pedidos_por_estado).map(([e, n]) => [`Pedidos ${e}`, n]),
+    ];
+    $('#kpis').innerHTML = kpis.map(([t, v]) => `<div class="kpi"><span>${esc(t)}</span><b>${esc(v)}</b></div>`).join('');
+    const max = Math.max(1, ...r.mas_vendidos.map((v) => v.unidades));
+    $('#vendidos').innerHTML = r.mas_vendidos.map((v) => `
+      <div style="margin:10px 0">
+        <div class="fila" style="justify-content:space-between"><span>${esc(v.nombre)}</span><span class="muted">${v.unidades} u · ${soles(v.ingresos)}</span></div>
+        <div class="barra" style="width:${(v.unidades / max) * 100}%"></div>
+      </div>`).join('') || '<p class="vacio">Aún no hay ventas.</p>';
+  } catch (e) { toast(e.message, 'mal'); }
+}
+
+// ---------- Demo de concurrencia ----------
+$('#form-demo').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const boton = ev.target.querySelector('button');
+  const { stock, compras } = Object.fromEntries(new FormData(ev.target));
+  const n = Number(compras);
+  boton.disabled = true;
+  $('#resultado-demo').innerHTML = '';
+  $('#cuadros').innerHTML = Array.from({ length: n }, (_, i) => `<div class="cuadro" id="c${i}">${i + 1}</div>`).join('');
+  try {
+    const { datos: p } = await api('POST', '/productos', {
+      sku: `DEMO-${Date.now().toString(36).toUpperCase()}`, nombre: 'Producto demo concurrencia', precio: 99.9, stock: Number(stock), stock_minimo: 1,
+    });
+    const inicio = performance.now();
+    // Todas las peticiones salen a la vez: no esperamos una para lanzar la siguiente
+    const resultados = await Promise.all(Array.from({ length: n }, (_, i) =>
+      api('POST', '/pedidos', { items: [{ producto_id: p.id, cantidad: 1 }] })
+        .then(() => { $(`#c${i}`).className = 'cuadro ok'; return true; })
+        .catch(() => { $(`#c${i}`).className = 'cuadro mal'; return false; })));
+    const ms = Math.round(performance.now() - inicio);
+    const aprobadas = resultados.filter(Boolean).length;
+    const { datos: final } = await api('GET', `/productos/${p.id}`);
+    const correcto = aprobadas === Number(stock) && final.stock === 0;
+    $('#resultado-demo').innerHTML = `<div class="msg ${correcto ? 'ok' : 'mal'}">
+      <b>${aprobadas}</b> compras aprobadas · <b>${n - aprobadas}</b> rechazadas por falta de stock ·
+      stock final <b>${final.stock}</b> · ${ms} ms<br>${correcto ? '✅ Sin sobreventa: se vendió exactamente el stock disponible.' : '❌ Resultado inesperado'}</div>`;
+  } catch (e) { $('#resultado-demo').innerHTML = `<div class="msg mal">${esc(e.message)}</div>`; }
+  boton.disabled = false;
+});
+
+// ---------- Inicio ----------
+function iniciar() {
+  pintarBackends();
+  pintarSesion();
+  verificarSalud();
+  cargarCategorias();
+  const activa = document.querySelector('nav button.activo')?.dataset.vista || 'catalogo';
+  mostrarVista(activa);
+}
+iniciar();
+</script>
+</body>
+</html>
