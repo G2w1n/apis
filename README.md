@@ -214,8 +214,8 @@ El archivo [`render.yaml`](render.yaml) crea todo de una vez: las 3 APIs, el pan
 > En el plan gratuito los servicios se "duermen" tras 15 min sin uso: la primera visita tarda ~1 min. Ábrelos unos minutos
 > antes de exponer. La base PostgreSQL gratuita de Render caduca a los 30 días.
 
-### Desplegar en Firebase (proyecto `apip-e0b09`)
-El repositorio ya apunta al proyecto `apip-e0b09` (`node-firebase/.firebaserc`). Cloud Functions y Firestore usan la
+### Desplegar en Firebase (proyecto `probandoapi-8c9b8`)
+El repositorio ya apunta al proyecto `probandoapi-8c9b8` (`node-firebase/.firebaserc`). Cloud Functions y Firestore usan la
 región **southamerica-east1** (São Paulo).
 
 **Con plan Blaze** (API + panel en la nube):
@@ -225,8 +225,8 @@ firebase login
 cp functions/.env.example functions/.env    # cambia JWT_SECRET por un texto largo y aleatorio
 firebase deploy --only functions,hosting,firestore
 ```
-- Panel: https://apip-e0b09.web.app
-- API: https://apip-e0b09.web.app/api/v1/health
+- Panel: https://probandoapi-8c9b8.web.app
+- API: https://probandoapi-8c9b8.web.app/api/v1/health
 
 **Sin Blaze** (plan Spark: Firestore real + panel en Hosting; la API corre en tu PC):
 ```bash

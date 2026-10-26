@@ -34,10 +34,10 @@ npm run emuladores      # dentro de functions/ · panel: http://localhost:5000 �
 ```
 
 ## Proyecto en la nube
-- Proyecto: **`apip-e0b09`** · región: **southamerica-east1** (São Paulo).
+- Proyecto: **`probandoapi-8c9b8`** · región: **southamerica-east1** (São Paulo).
 - Los emuladores usan el proyecto ficticio `demo-tienda`, así nunca tocan tus datos reales.
 - Para usar Firestore real desde tu PC, guarda la clave de la cuenta de servicio como `functions/serviceAccount.json` (ignorada por git).
-- Despliegue y opción sin Blaze: ver el [README principal](../README.md#desplegar-en-firebase-proyecto-apip-e0b09).
+- Despliegue y opción sin Blaze: ver el [README principal](../README.md#desplegar-en-firebase-proyecto-probandoapi-8c9b8).
 
 ## Decisiones de diseño en Firestore
 - **Sin `UNIQUE`:** se crean documentos "candado" (`_unicos/sku:LAP-001`, `_unicos/email:...`) dentro de la transacción; `create()` falla si ya existen.

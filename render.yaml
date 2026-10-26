@@ -19,7 +19,7 @@ services:
         value: production
       - key: JWT_SECRET
         generateValue: true
-      # Pega aquí TODO el contenido del JSON de la cuenta de servicio de Firebase (proyecto apip-e0b09)
+      # Pega aquí TODO el contenido del JSON de la cuenta de servicio de Firebase (proyecto probandoapi-8c9b8)
       - key: FIREBASE_SERVICE_ACCOUNT
         sync: false
 
