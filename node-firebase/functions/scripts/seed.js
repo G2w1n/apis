@@ -1,9 +1,11 @@
 // Borra los datos y carga ../../shared/seed.json (los mismos datos que usan Django y Rails)
 import { readFile } from 'node:fs/promises';
-import { db, col } from '../src/firebase.js';
+import { db, col, exigirCredenciales } from '../src/firebase.js';
 import * as usuarios from '../src/services/usuarios.js';
 import * as categorias from '../src/services/categorias.js';
 import * as productos from '../src/services/productos.js';
+
+exigirCredenciales();
 
 const seed = JSON.parse(await readFile(new URL('../../../shared/seed.json', import.meta.url)));
 

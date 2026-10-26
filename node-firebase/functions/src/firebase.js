@@ -10,7 +10,15 @@ import { config } from './config.js';
 //  - Tu PC contra Firestore real: guarda ese JSON como functions/serviceAccount.json
 function leerClave() {
   if (process.env.FIRESTORE_EMULATOR_HOST) return null;
-  if (process.env.FIREBASE_SERVICE_ACCOUNT) return JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+  const texto = process.env.FIREBASE_SERVICE_ACCOUNT?.trim();
+  if (texto) {
+    try {
+      // Acepta el JSON tal cual o codificado en base64
+      return JSON.parse(texto.startsWith('{') ? texto : Buffer.from(texto, 'base64').toString('utf8'));
+    } catch {
+      throw new Error('FIREBASE_SERVICE_ACCOUNT no es un JSON válido: pega el contenido COMPLETO del archivo, desde "{" hasta "}"');
+    }
+  }
   const archivo = new URL('../serviceAccount.json', import.meta.url);
   return existsSync(archivo) ? JSON.parse(readFileSync(archivo, 'utf8')) : null;
 }
@@ -18,6 +26,23 @@ function leerClave() {
 const opciones = { projectId: config.proyectoId };
 const clave = leerClave();
 if (clave) Object.assign(opciones, { credential: cert(clave), projectId: clave.project_id });
+
+// Cloud Functions trae sus credenciales; fuera de Google hay que darlas explícitamente
+export const tieneCredenciales = Boolean(process.env.FIRESTORE_EMULATOR_HOST || clave || process.env.GCLOUD_PROJECT
+  || process.env.GOOGLE_APPLICATION_CREDENTIALS || process.env.K_SERVICE);
+
+export function exigirCredenciales() {
+  if (tieneCredenciales) return;
+  console.error(`
+✗ No hay credenciales de Firebase, así que no se puede conectar a Firestore.
+  Elige una opción:
+   • En Render u otro servidor: crea la variable de entorno FIREBASE_SERVICE_ACCOUNT y pega dentro
+     TODO el JSON de la cuenta de servicio (Firebase → Configuración → Cuentas de servicio → Generar nueva clave privada).
+   • En tu PC: guarda ese JSON como node-firebase/functions/serviceAccount.json
+   • Para probar sin la nube: usa el emulador (FIRESTORE_EMULATOR_HOST=127.0.0.1:8080).
+`);
+  process.exit(1);
+}
 if (!getApps().length) initializeApp(opciones);
 
 export const db = getFirestore();
