@@ -27,6 +27,9 @@ const opciones = { projectId: config.proyectoId };
 const clave = leerClave();
 if (clave) Object.assign(opciones, { credential: cert(clave), projectId: clave.project_id });
 
+// Proyecto realmente usado (viene de la llave cuando se conecta a la nube)
+export const proyectoActivo = opciones.projectId || process.env.GCLOUD_PROJECT || 'desconocido';
+
 // Cloud Functions trae sus credenciales; fuera de Google hay que darlas explícitamente
 export const tieneCredenciales = Boolean(process.env.FIRESTORE_EMULATOR_HOST || clave || process.env.GCLOUD_PROJECT
   || process.env.GOOGLE_APPLICATION_CREDENTIALS || process.env.K_SERVICE);
