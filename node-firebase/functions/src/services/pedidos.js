@@ -4,6 +4,7 @@ import { AppError, noEncontrado } from '../utils/AppError.js';
 import { aCentimos, aSoles } from '../utils/dinero.js';
 import { leerPaginacion, paginar } from '../utils/paginacion.js';
 import { pedidoJSON } from '../utils/serializar.js';
+import { conCandado } from '../utils/candado.js';
 
 // Máquina de estados: qué transiciones están permitidas desde cada estado
 export const TRANSICIONES = {
@@ -41,7 +42,7 @@ export async function crear(usuarioId, itemsSolicitados, claveIdempotencia) {
   const pedidoRef = col.pedidos.doc();
   const idemRef = claveIdempotencia ? refIdempotencia(usuarioId, claveIdempotencia) : null;
 
-  return db.runTransaction(async (tx) => {
+  return conCandado(items.map((i) => i.producto_id), () => db.runTransaction(async (tx) => {
     // --- Lecturas (Firestore exige leer todo antes de escribir) ---
     if (idemRef) {
       const previo = await tx.get(idemRef);
@@ -94,7 +95,7 @@ export async function crear(usuarioId, itemsSolicitados, claveIdempotencia) {
     tx.create(pedidoRef, pedido);
     if (idemRef) tx.create(idemRef, { pedido_id: pedidoRef.id, created_at: ahora });
     return { pedido: pedidoJSON(pedidoRef.id, pedido), repetido: false };
-  }, OPCIONES_TX);
+  }, OPCIONES_TX));
 }
 
 // Un cliente solo puede ver sus pedidos; si no es suyo respondemos 404 (no revelamos que existe)
@@ -130,7 +131,9 @@ export async function obtener(id, usuario) {
 // Cancelar devuelve el stock de cada item y lo registra como "entrada" en el kardex
 export async function cancelar(id, usuario) {
   const ref = col.pedidos.doc(id);
-  return db.runTransaction(async (tx) => {
+  const previo = await ref.get();
+  const claves = previo.exists ? previo.data().items.map((i) => i.producto_id) : [];
+  return conCandado(claves, () => db.runTransaction(async (tx) => {
     const doc = await tx.get(ref);
     verificarAcceso(doc, usuario);
     const pedido = doc.data();
@@ -152,7 +155,7 @@ export async function cancelar(id, usuario) {
     const historial = [...pedido.historial, { estado: 'cancelado', fecha: ahora }];
     tx.update(ref, { estado: 'cancelado', historial });
     return pedidoJSON(id, { ...pedido, estado: 'cancelado', historial });
-  }, OPCIONES_TX);
+  }, OPCIONES_TX));
 }
 
 export async function cambiarEstado(id, estado, usuario) {

@@ -3,12 +3,13 @@ import { AppError, noEncontrado } from '../utils/AppError.js';
 import { aCentimos, aSoles } from '../utils/dinero.js';
 import { leerPaginacion, paginar } from '../utils/paginacion.js';
 import { movimientoJSON, productoJSON } from '../utils/serializar.js';
+import { conCandado } from '../utils/candado.js';
 
 // Entrada (compra a proveedor) o salida manual (merma, robo, uso interno)
 export async function registrarMovimiento({ producto_id, tipo, cantidad, motivo }, usuarioId) {
   const productoRef = col.productos.doc(producto_id);
   const movRef = col.movimientos.doc();
-  return db.runTransaction(async (tx) => {
+  return conCandado([producto_id], () => db.runTransaction(async (tx) => {
     const doc = await tx.get(productoRef);
     if (!doc.exists || !doc.data().activo) throw noEncontrado('Producto');
     const p = doc.data();
@@ -26,7 +27,7 @@ export async function registrarMovimiento({ producto_id, tipo, cantidad, motivo 
     tx.update(productoRef, { stock: stockResultante, updated_at: ahora });
     tx.create(movRef, mov);
     return movimientoJSON(movRef.id, mov);
-  }, { maxAttempts: 30 });
+  }, { maxAttempts: 30 }));
 }
 
 // Kardex: historial de movimientos, del más reciente al más antiguo
