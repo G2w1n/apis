@@ -76,6 +76,8 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           working-directory: rails
+          # Los runners nuevos solo traen el último parche de cada serie (Render usa .ruby-version)
+          ruby-version: "3.3"
           bundler-cache: true
       - if: matrix.api == 'rails'
         name: Probar Rails
