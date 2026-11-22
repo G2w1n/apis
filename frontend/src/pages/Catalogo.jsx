@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, SlidersHorizontal } from 'lucide-react';
+import { PencilRuler, Search, SlidersHorizontal } from 'lucide-react';
+import { useAuth } from '../context/AuthContext.jsx';
+import { leer, guardar } from '../utils/almacen.js';
 import { useCategorias, useProductos } from '../api/consultas.js';
 import TarjetaProducto from '../components/TarjetaProducto.jsx';
 import { ErrorCaja, Paginacion, Vacio } from '../components/ui.jsx';
@@ -27,6 +29,9 @@ export default function Catalogo() {
     limit: '12',
   };
   const [texto, setTexto] = useState(filtros.q);
+  const { esAdmin } = useAuth();
+  const [modoEdicion, setModoEdicion] = useState(() => leer('voltec.modoEdicion', false));
+  const editable = esAdmin && modoEdicion;
   const productos = useProductos(filtros);
   const categorias = useCategorias();
 
@@ -46,10 +51,26 @@ export default function Catalogo() {
   const lista = productos.data?.data ?? [];
   return (
     <div className="pt-8">
-      <div className="mb-8">
-        <h1 className="font-display text-3xl font-bold sm:text-4xl">Catálogo</h1>
-        <p className="mt-1 text-slate-400">{productos.data ? `${productos.data.meta.total} productos` : 'Buscando productos…'}</p>
+      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="font-display text-3xl font-bold sm:text-4xl">Catálogo</h1>
+          <p className="mt-1 text-slate-400">{productos.data ? `${productos.data.meta.total} productos` : 'Buscando productos…'}</p>
+        </div>
+        {esAdmin && (
+          <label className={`flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-2.5 text-sm transition ${editable ? 'border-violeta/50 bg-violeta/10' : 'border-borde bg-white/5'}`}>
+            <PencilRuler className={`h-4 w-4 ${editable ? 'text-violeta' : 'text-slate-500'}`} aria-hidden />
+            <span><span className="font-semibold">Modo edición</span><span className="block text-xs text-slate-400">Cambia precio y stock aquí mismo</span></span>
+            <input type="checkbox" role="switch" className="h-5 w-9 cursor-pointer appearance-none rounded-full bg-slate-700 transition before:block before:h-4 before:w-4 before:translate-x-0.5 before:rounded-full before:bg-white before:transition checked:bg-violeta checked:before:translate-x-[1.1rem]"
+              checked={modoEdicion} onChange={(e) => { setModoEdicion(e.target.checked); guardar('voltec.modoEdicion', e.target.checked); }} />
+          </label>
+        )}
       </div>
+      {editable && (
+        <p className="mb-6 rounded-xl border border-violeta/30 bg-violeta/10 px-4 py-3 text-sm text-violet-200">
+          ✏️ Haz clic en un <b>precio</b> para cambiarlo, o usa <b>−1 / +1 / +5</b> para el stock. Cada cambio se envía a la API
+          y aparece en la <b>Consola API</b> (abajo a la izquierda).
+        </p>
+      )}
 
       <div className="grid gap-8 lg:grid-cols-[260px_1fr]">
         <aside className="tarjeta h-fit space-y-6 p-5 lg:sticky lg:top-24">
@@ -98,7 +119,7 @@ export default function Catalogo() {
             : lista.length === 0 ? <Vacio titulo="Sin resultados" texto="Prueba con otra búsqueda o limpia los filtros." />
             : (
               <div className={`grid gap-5 sm:grid-cols-2 xl:grid-cols-3 ${productos.isFetching ? 'opacity-60' : ''}`}>
-                {lista.map((p) => <TarjetaProducto key={p.id} producto={p} />)}
+                {lista.map((p) => <TarjetaProducto key={p.id} producto={p} editable={editable} />)}
               </div>
             )}
           <Paginacion meta={productos.data?.meta} alCambiar={(page) => { cambiar({ page: String(page) }); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />

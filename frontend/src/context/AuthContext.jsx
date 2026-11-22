@@ -2,12 +2,14 @@ import { createContext, useCallback, useContext, useMemo, useState } from 'react
 import { crearCliente } from '../api/cliente.js';
 import { leer, guardar } from '../utils/almacen.js';
 import { useBackend } from './ApiContext.jsx';
+import { useConsola } from './ConsolaContext.jsx';
 
 const AuthContext = createContext(null);
 
 // La sesión se guarda POR API: un usuario de Django no existe en Rails (son bases distintas)
 export function AuthProvider({ children }) {
   const { backend, setLento } = useBackend();
+  const { registrar } = useConsola();
   const [sesiones, setSesiones] = useState(() => leer('voltec.sesiones', {}));
   const sesion = sesiones[backend.id] ?? null;
 
@@ -21,8 +23,8 @@ export function AuthProvider({ children }) {
   }, [backend.id]);
 
   const api = useMemo(
-    () => crearCliente(backend.base, () => sesion?.token, { alTardar: setLento, alNoAutorizado: () => actualizar(null) }),
-    [backend.base, sesion?.token, setLento, actualizar],
+    () => crearCliente(backend.base, () => sesion?.token, { alTardar: setLento, alNoAutorizado: () => actualizar(null), alRegistrar: registrar }),
+    [backend.base, sesion?.token, setLento, actualizar, registrar],
   );
 
   const valor = useMemo(() => ({

@@ -6,6 +6,7 @@ import { ApiProvider } from './context/ApiContext.jsx';
 import { AuthProvider } from './context/AuthContext.jsx';
 import { CarritoProvider } from './context/CarritoContext.jsx';
 import { TemaProvider } from './context/TemaContext.jsx';
+import { ConsolaProvider } from './context/ConsolaContext.jsx';
 import App from './App.jsx';
 import './index.css';
 
@@ -26,11 +27,13 @@ ReactDOM.createRoot(document.getElementById('root')).render(
       <QueryClientProvider client={clienteQuery}>
         <TemaProvider>
         <ApiProvider>
+          <ConsolaProvider>
           <AuthProvider>
             <CarritoProvider>
               <App />
             </CarritoProvider>
           </AuthProvider>
+          </ConsolaProvider>
         </ApiProvider>
         </TemaProvider>
       </QueryClientProvider>

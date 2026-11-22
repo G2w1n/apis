@@ -13,11 +13,17 @@ export class ApiError extends Error {
 /**
  * @param {string} base         URL base, ej. https://g2w1n-tienda-express.onrender.com/api/v1
  * @param {() => string|null} obtenerToken
- * @param {{ alTardar?: (lento: boolean) => void, alNoAutorizado?: () => void }} eventos
+ * @param {{ alTardar?: (lento: boolean) => void, alNoAutorizado?: () => void, alRegistrar?: (r: object) => void }} eventos
  */
-export function crearCliente(base, obtenerToken, { alTardar, alNoAutorizado } = {}) {
+export function crearCliente(base, obtenerToken, { alTardar, alNoAutorizado, alRegistrar } = {}) {
   return async function api(metodo, ruta, { body, headers = {} } = {}) {
     const token = obtenerToken();
+    const inicio = performance.now();
+    // Cada petición queda en la consola de la API: método, ruta, envío, respuesta y tiempo
+    const anotar = (status, respuesta) => alRegistrar?.({
+      metodo, ruta, base, status, envio: body, respuesta, ms: Math.round(performance.now() - inicio),
+      autenticado: Boolean(token), fecha: new Date(),
+    });
     // Si tarda más de 4 s avisamos: en Render gratis el servidor puede estar "despertando"
     const aviso = setTimeout(() => alTardar?.(true), 4000);
     let res;
@@ -32,6 +38,7 @@ export function crearCliente(base, obtenerToken, { alTardar, alNoAutorizado } = 
         body: body !== undefined ? JSON.stringify(body) : undefined,
       });
     } catch {
+      anotar(0, { error: 'Sin conexión' });
       throw new ApiError(0, 'SIN_CONEXION', 'No se pudo conectar con la API. Revisa que esté encendida.');
     } finally {
       clearTimeout(aviso);
@@ -39,6 +46,7 @@ export function crearCliente(base, obtenerToken, { alTardar, alNoAutorizado } = 
     }
 
     const datos = res.status === 204 ? null : await res.json().catch(() => null);
+    anotar(res.status, datos);
     if (!res.ok) {
       if (res.status === 401 && token) alNoAutorizado?.();
       const e = datos?.error ?? {};

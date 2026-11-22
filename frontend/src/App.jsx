@@ -5,6 +5,7 @@ import Navbar from './components/Navbar.jsx';
 import Footer from './components/Footer.jsx';
 import CarritoDrawer from './components/CarritoDrawer.jsx';
 import AvisoLento from './components/AvisoLento.jsx';
+import ConsolaApi from './components/ConsolaApi.jsx';
 import RutaProtegida from './components/RutaProtegida.jsx';
 import Inicio from './pages/Inicio.jsx';
 import Catalogo from './pages/Catalogo.jsx';
@@ -36,6 +37,7 @@ function Tienda() {
       </main>
       <Footer />
       <CarritoDrawer />
+      <ConsolaApi />
     </>
   );
 }

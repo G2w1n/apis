@@ -38,6 +38,14 @@ src/
 └── pages/               tienda y pages/admin (cargadas bajo demanda para que la tienda pese menos)
 ```
 
+## Edición en vivo (admin)
+- **Catálogo → "Modo edición":** clic en el precio de una tarjeta para cambiarlo (Enter guarda, Esc cancela) y botones **−1 / +1 / +5** de stock.
+- **Detalle del producto:** el admin edita nombre, precio, descripción y stock mínimo haciendo clic, registra entradas/salidas con motivo
+  y ve el **historial de cambios** (antes → después) que sale de `GET /auditoria`.
+- **Actualización optimista:** el cambio se ve al instante; si la API lo rechaza, se deshace y se muestra el motivo.
+- **Consola API** (botón abajo a la izquierda): muestra cada petición que hace la página — método, ruta, código, tiempo, lo enviado y la respuesta.
+  Las contraseñas y tokens se ocultan. Ideal para mostrar en la exposición qué llega a la API.
+
 ## Seguridad en el navegador
 Render envía cabeceras definidas en `render.yaml`:
 - **Content-Security-Policy:** solo scripts propios; conexiones solo a las 3 APIs y a Google Fonts; sin iframes (`frame-ancestors 'none'`).
