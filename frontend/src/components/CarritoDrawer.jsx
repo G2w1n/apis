@@ -1,41 +1,25 @@
-import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
 import { Minus, Plus, ShieldCheck, ShoppingBag, Trash2, X } from 'lucide-react';
 import { useCarrito } from '../context/CarritoContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
-import { mensajeError } from '../api/cliente.js';
+import { AnimatePresence, motion } from 'framer-motion';
 import { soles } from '../utils/formato.js';
 import ArteProducto from './ArteProducto.jsx';
 
 export default function CarritoDrawer() {
   const carrito = useCarrito();
-  const { api, usuario } = useAuth();
-  const cliente = useQueryClient();
+  const { usuario } = useAuth();
   const navegar = useNavigate();
-  const [error, setError] = useState(null);
 
-  const comprar = useMutation({
-    mutationFn: () => api('POST', '/pedidos', {
-      body: { items: carrito.items.map((i) => ({ producto_id: i.producto.id, cantidad: i.cantidad })) },
-      headers: { 'Idempotency-Key': carrito.claveIdempotencia },
-    }),
-    onSuccess: ({ datos, repetido }) => {
-      toast.success(repetido ? 'Ese pedido ya estaba registrado' : '¡Pedido confirmado!', { description: `Total ${soles(datos.total)}` });
-      carrito.vaciar();
-      carrito.setAbierto(false);
-      cliente.invalidateQueries();
-      navegar('/mis-pedidos');
-    },
-    onError: (e) => setError(mensajeError(e)),
-  });
-
-  if (!carrito.abierto) return null;
   return (
-    <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label="Carrito">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => carrito.setAbierto(false)} />
-      <aside className="absolute right-0 top-0 flex h-full w-full max-w-md animate-aparecer flex-col border-l border-borde bg-panel">
+    <AnimatePresence>
+      {carrito.abierto && (
+    <motion.div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label="Carrito" initial="cerrado" animate="abierto" exit="cerrado">
+      <motion.div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => carrito.setAbierto(false)}
+        variants={{ cerrado: { opacity: 0 }, abierto: { opacity: 1 } }} />
+      {/* El panel entra deslizándose desde la derecha con un resorte */}
+      <motion.aside className="absolute right-0 top-0 flex h-full w-full max-w-md flex-col border-l border-borde bg-panel"
+        variants={{ cerrado: { x: '100%' }, abierto: { x: 0 } }} transition={{ type: 'spring', stiffness: 380, damping: 38 }}>
         <header className="flex items-center justify-between border-b border-borde px-5 py-4">
           <h2 className="flex items-center gap-2 font-display text-lg font-bold"><ShoppingBag className="h-5 w-5 text-acento" />Tu carrito</h2>
           <button className="rounded-lg p-2 hover:bg-white/5" onClick={() => carrito.setAbierto(false)} aria-label="Cerrar"><X className="h-5 w-5" /></button>
@@ -50,8 +34,10 @@ export default function CarritoDrawer() {
         ) : (
           <>
             <ul className="flex-1 space-y-3 overflow-y-auto p-5">
+              <AnimatePresence initial={false}>
               {carrito.items.map(({ producto, cantidad }) => (
-                <li key={producto.id} className="flex gap-3 rounded-xl border border-borde bg-white/[.02] p-3">
+                <motion.li key={producto.id} layout initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 60, height: 0, marginTop: 0, paddingTop: 0, paddingBottom: 0 }}
+                  className="flex gap-3 overflow-hidden rounded-xl border border-borde bg-white/[.02] p-3">
                   <ArteProducto producto={producto} tamano="sm" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold">{producto.nombre}</p>
@@ -63,21 +49,21 @@ export default function CarritoDrawer() {
                       <button className="ml-auto rounded-md p-1 text-slate-500 hover:text-red-400" onClick={() => carrito.quitar(producto.id)} aria-label="Eliminar"><Trash2 className="h-4 w-4" /></button>
                     </div>
                   </div>
-                </li>
+                </motion.li>
               ))}
+              </AnimatePresence>
             </ul>
             <footer className="space-y-3 border-t border-borde p-5">
-              {error && <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">{error}</p>}
               <div className="flex items-center justify-between">
                 <span className="text-slate-400">Total</span>
                 <span className="font-display text-2xl font-bold">{soles(carrito.total)}</span>
               </div>
               {usuario ? (
-                <button className="btn-primario w-full py-3" disabled={comprar.isPending} onClick={() => { setError(null); comprar.mutate(); }}>
-                  {comprar.isPending ? 'Procesando…' : 'Confirmar pedido'}
+                <button className="btn-primario w-full py-3" onClick={() => { carrito.setAbierto(false); navegar('/checkout'); }}>
+                  Ir a pagar
                 </button>
               ) : (
-                <Link to="/login" className="btn-primario w-full py-3" onClick={() => carrito.setAbierto(false)}>Inicia sesión para comprar</Link>
+                <Link to="/login" state={{ desde: '/checkout' }} className="btn-primario w-full py-3" onClick={() => carrito.setAbierto(false)}>Inicia sesión para comprar</Link>
               )}
               <p className="flex items-center justify-center gap-1.5 text-xs text-slate-500">
                 <ShieldCheck className="h-3.5 w-3.5" />Protegido contra pedidos duplicados por doble clic
@@ -85,7 +71,9 @@ export default function CarritoDrawer() {
             </footer>
           </>
         )}
-      </aside>
-    </div>
+      </motion.aside>
+    </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

@@ -46,8 +46,10 @@ export default {
       },
       keyframes: {
         aparecer: { from: { opacity: 0, transform: 'translateY(8px)' }, to: { opacity: 1, transform: 'none' } },
+        // Para elementos centrados con translate(-50%): animar transform les quitaría el centrado
+        desvanecer: { from: { opacity: 0 }, to: { opacity: 1 } },
       },
-      animation: { aparecer: 'aparecer .35s ease-out both' },
+      animation: { aparecer: 'aparecer .35s ease-out both', desvanecer: 'desvanecer .2s ease-out both' },
     },
   },
   plugins: [

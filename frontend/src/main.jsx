@@ -7,6 +7,10 @@ import { AuthProvider } from './context/AuthContext.jsx';
 import { CarritoProvider } from './context/CarritoContext.jsx';
 import { TemaProvider } from './context/TemaContext.jsx';
 import { ConsolaProvider } from './context/ConsolaContext.jsx';
+import { MotionConfig } from 'framer-motion';
+import { VueloProvider } from './animacion/VueloCarrito.jsx';
+import { CompararProvider } from './context/CompararContext.jsx';
+import { ProveedorAyudas } from './components/Radix.jsx';
 import App from './App.jsx';
 import './index.css';
 
@@ -29,9 +33,18 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <ApiProvider>
           <ConsolaProvider>
           <AuthProvider>
-            <CarritoProvider>
-              <App />
-            </CarritoProvider>
+            {/* reducedMotion="user": si el sistema pide menos movimiento, Framer desactiva transformaciones */}
+            <MotionConfig reducedMotion="user">
+              <VueloProvider>
+                <CarritoProvider>
+                  <CompararProvider>
+                    <ProveedorAyudas>
+                      <App />
+                    </ProveedorAyudas>
+                  </CompararProvider>
+                </CarritoProvider>
+              </VueloProvider>
+            </MotionConfig>
           </AuthProvider>
           </ConsolaProvider>
         </ApiProvider>

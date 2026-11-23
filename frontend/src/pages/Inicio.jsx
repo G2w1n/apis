@@ -4,34 +4,47 @@ import { useCategorias, useProductos } from '../api/consultas.js';
 import TarjetaProducto from '../components/TarjetaProducto.jsx';
 import { ErrorCaja } from '../components/ui.jsx';
 import { GrillaEsqueleto } from '../components/Esqueletos.jsx';
+import Aparecer from '../animacion/Aparecer.jsx';
+import { motion } from 'framer-motion';
+import Hero3D from '../components/Hero3D.jsx';
+import Carrusel from '../components/Carrusel.jsx';
+
+// El texto del hero entra en cascada
+const cascada = { oculto: {}, visible: { transition: { staggerChildren: 0.09 } } };
+const linea = { oculto: { opacity: 0, y: 18 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] } } };
 
 const ICONOS = { Laptops: Laptop, Celulares: Smartphone, Accesorios: Headphones };
 
 export default function Inicio() {
-  const destacados = useProductos({ limit: 4, orden: '-precio' });
+  const destacados = useProductos({ limit: 8, orden: '-precio' });
   const ultimas = useProductos({ limit: 4, bajo_stock: 'true', orden: 'stock' });
   const categorias = useCategorias();
 
   return (
     <div className="space-y-20">
       {/* Hero */}
-      <section className="relative overflow-hidden pt-10 sm:pt-16">
-        <div className="max-w-3xl animate-aparecer">
-          <span className="inline-flex items-center gap-2 rounded-full border border-acento/30 bg-acento/10 px-3 py-1 text-xs font-semibold text-acento">
+      <section className="relative grid items-center gap-6 pt-10 sm:pt-16 lg:grid-cols-[1.1fr_1fr]">
+        <motion.div variants={cascada} initial="oculto" animate="visible">
+          <motion.span variants={linea} className="inline-flex items-center gap-2 rounded-full border border-acento/30 bg-acento/10 px-3 py-1 text-xs font-semibold text-acento">
             <Zap className="h-3.5 w-3.5" fill="currentColor" />Nueva temporada 2026
-          </span>
-          <h1 className="mt-5 font-display text-4xl font-bold leading-[1.05] tracking-tight sm:text-6xl">
+          </motion.span>
+          <motion.h1 variants={linea} className="mt-5 font-display text-4xl font-bold leading-[1.05] tracking-tight sm:text-6xl">
             La tecnología que <span className="texto-gradiente">mueve tu día</span>
-          </h1>
-          <p className="mt-5 max-w-xl text-lg text-slate-400">
+          </motion.h1>
+          <motion.p variants={linea} className="mt-5 max-w-xl text-lg text-slate-400">
             Laptops, celulares y accesorios de las mejores marcas, con stock en tiempo real y compra segura.
-          </p>
-          <div className="mt-8 flex flex-wrap gap-3">
+          </motion.p>
+          <motion.div variants={linea} className="mt-8 flex flex-wrap gap-3">
             <Link to="/catalogo" className="btn-primario px-6 py-3 text-base">Ver catálogo <ArrowRight className="h-4 w-4" /></Link>
             <Link to="/catalogo?bajo_stock=true" className="btn-secundario px-6 py-3 text-base">Últimas unidades</Link>
-          </div>
-        </div>
-        <div aria-hidden className="pointer-events-none absolute -right-20 top-0 hidden h-[28rem] w-[28rem] rounded-full bg-gradient-to-br from-acento/20 via-violeta/20 to-transparent blur-3xl lg:block" />
+          </motion.div>
+          <motion.p variants={linea} className="mt-6 text-sm text-slate-500">
+            Tip: pulsa <kbd className="rounded border border-borde px-1.5 text-xs">Ctrl</kbd> + <kbd className="rounded border border-borde px-1.5 text-xs">K</kbd> para buscar cualquier cosa.
+          </motion.p>
+        </motion.div>
+        <motion.div className="hidden lg:block" initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.7, delay: 0.2 }}>
+          <Hero3D />
+        </motion.div>
       </section>
 
       {/* Beneficios */}
@@ -67,7 +80,17 @@ export default function Inicio() {
         </div>
       </section>
 
-      <Vitrina titulo="Lo más premium" consulta={destacados} />
+      <section>
+        <div className="mb-4 flex items-end justify-between">
+          <h2 className="font-display text-2xl font-bold">Lo más premium</h2>
+          <Link to="/catalogo?orden=-precio" className="text-sm font-medium text-acento hover:underline">Ver todo →</Link>
+        </div>
+        {destacados.isLoading ? <GrillaEsqueleto /> : destacados.isError ? <ErrorCaja error={destacados.error} reintentar={destacados.refetch} /> : (
+          <Carrusel etiqueta="Productos destacados">
+            {(destacados.data?.data ?? []).map((p) => <TarjetaProducto key={p.id} producto={p} />)}
+          </Carrusel>
+        )}
+      </section>
       <Vitrina titulo="🔥 Últimas unidades" consulta={ultimas} enlace="/catalogo?bajo_stock=true" />
     </div>
   );
@@ -84,7 +107,7 @@ function Vitrina({ titulo, consulta, enlace = '/catalogo' }) {
       </div>
       {consulta.isLoading ? <GrillaEsqueleto /> : consulta.isError ? <ErrorCaja error={consulta.error} reintentar={consulta.refetch} /> : (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {productos.map((p) => <TarjetaProducto key={p.id} producto={p} />)}
+          {productos.map((p, i) => <Aparecer key={p.id} indice={i}><TarjetaProducto producto={p} /></Aparecer>)}
         </div>
       )}
     </section>

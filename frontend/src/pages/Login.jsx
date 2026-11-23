@@ -14,7 +14,8 @@ const DEMO = {
 export default function Login() {
   const { login, registro } = useAuth();
   const navegar = useNavigate();
-  const destino = useLocation().state?.desde ?? '/';
+  const desde = useLocation().state?.desde;
+  const destino = desde && desde !== '/login' ? desde : '/';
   const [modo, setModo] = useState('login');
   const [form, setForm] = useState({ nombre: '', email: '', password: '' });
   const [error, setError] = useState(null);

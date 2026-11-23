@@ -23,10 +23,13 @@ const qs = (params) => {
 export const useProductos = (params = {}) => useConsulta(['productos', params], `/productos${qs(params)}`, { placeholderData: (prev) => prev });
 export const useProducto = (id) => useConsulta(['producto', id], `/productos/${encodeURIComponent(id)}`, { enabled: Boolean(id) });
 export const useCategorias = () => useConsulta(['categorias'], '/categorias', { staleTime: 5 * 60_000 });
-export const usePedidos = (params = {}, habilitado = true) => useConsulta(['pedidos', params], `/pedidos${qs(params)}`, { enabled: habilitado });
+export const usePedidos = (params = {}, habilitado = true, cadaMs = false) =>
+  useConsulta(['pedidos', params], `/pedidos${qs(params)}`, { enabled: habilitado, refetchInterval: cadaMs });
 export const useReporte = () => useConsulta(['reporte'], '/stock/reporte');
 export const useAlertas = () => useConsulta(['alertas'], '/stock/alertas');
 export const useMovimientos = (productoId) =>
   useConsulta(['movimientos', productoId], `/stock/movimientos${qs({ producto_id: productoId, limit: 50 })}`, { enabled: Boolean(productoId) });
 export const useAuditoria = (params) => useConsulta(['auditoria', params], `/auditoria${qs(params)}`, { placeholderData: (prev) => prev });
+export const useTarifas = () => useConsulta(['tarifas'], '/envios/tarifas', { staleTime: 10 * 60_000 });
+export const usePedido = (id, opciones = {}) => useConsulta(['pedido', id], `/pedidos/${encodeURIComponent(id)}`, { enabled: Boolean(id), ...opciones });
 export const useSalud = () => useConsulta(['salud'], '/health', { retry: 1, refetchInterval: 60_000 });

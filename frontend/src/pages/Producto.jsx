@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import { motion } from 'framer-motion';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Check, Minus, PencilRuler, Plus, ShieldCheck, ShoppingCart, Truck } from 'lucide-react';
 import { useProducto } from '../api/consultas.js';
@@ -20,6 +21,7 @@ export default function Producto() {
   const { esAdmin } = useAuth();
   const editar = useEditarProducto();
   const [cantidad, setCantidad] = useState(1);
+  const imagen = useRef(null);
 
   if (isLoading) return <DetalleEsqueleto />;
   if (isError) return <div className="pt-10"><ErrorCaja error={error} reintentar={refetch} /></div>;
@@ -36,7 +38,10 @@ export default function Producto() {
     <div className="pt-8">
       <Link to="/catalogo" className="mb-6 inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-white"><ArrowLeft className="h-4 w-4" />Volver al catálogo</Link>
       <div className="grid gap-10 lg:grid-cols-2">
-        <div className="tarjeta p-4"><ArteProducto producto={producto} tamano="lg" /></div>
+        <div className="tarjeta p-4">
+          {/* Mismo layoutId que la tarjeta: la imagen se anima desde el catálogo hasta aquí */}
+          <motion.div ref={imagen} layoutId={`imagen-${producto.id}`}><ArteProducto producto={producto} tamano="lg" /></motion.div>
+        </div>
         <div className="animate-aparecer">
           {esAdmin && (
             <p className="mb-4 flex items-center gap-2 rounded-xl border border-violeta/30 bg-violeta/10 px-3 py-2 text-xs text-violet-200">
@@ -80,7 +85,7 @@ export default function Producto() {
                 <span className="w-10 text-center font-semibold tabular-nums">{cantidad}</span>
                 <button className="p-3 hover:text-acento" onClick={() => setCantidad(Math.min(producto.stock, cantidad + 1))} aria-label="Más"><Plus className="h-4 w-4" /></button>
               </div>
-              <button className="btn-primario flex-1 py-3 text-base" onClick={() => agregar(producto, cantidad)}>
+              <button className="btn-primario flex-1 py-3 text-base" onClick={() => agregar(producto, cantidad, imagen.current)}>
                 <ShoppingCart className="h-5 w-5" />Agregar al carrito
               </button>
             </div>

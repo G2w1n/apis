@@ -1,6 +1,8 @@
 import { createContext, useContext, useMemo, useState } from 'react';
 import { leer, guardar } from '../utils/almacen.js';
 import { useBackend } from './ApiContext.jsx';
+import { toast } from 'sonner';
+import { useVuelo } from '../animacion/VueloCarrito.jsx';
 
 const CarritoContext = createContext(null);
 const nuevaClave = () => crypto.randomUUID();
@@ -8,6 +10,7 @@ const nuevaClave = () => crypto.randomUUID();
 // Un carrito por API (los IDs de producto son distintos en cada base de datos)
 export function CarritoProvider({ children }) {
   const { backend } = useBackend();
+  const { lanzar } = useVuelo();
   const [carritos, setCarritos] = useState(() => leer('voltec.carritos', {}));
   const [abierto, setAbierto] = useState(false);
   const carrito = carritos[backend.id] ?? { items: [], clave: nuevaClave() };
@@ -31,13 +34,19 @@ export function CarritoProvider({ children }) {
       claveIdempotencia: carrito.clave,
       cantidadTotal: items.reduce((s, i) => s + i.cantidad, 0),
       total: totalCentimos / 100,
-      agregar(producto, cantidad = 1) {
+      /** origen: elemento desde donde "vuela" la miniatura hasta el carrito (opcional) */
+      agregar(producto, cantidad = 1, origen = null) {
         const existe = items.find((i) => String(i.producto.id) === String(producto.id));
+        if (existe && existe.cantidad >= producto.stock) {
+          toast.warning(`Ya tienes todo el stock disponible de ${producto.nombre}`);
+          return;
+        }
         const nuevos = existe
           ? items.map((i) => (i === existe ? { ...i, cantidad: Math.min(i.cantidad + cantidad, producto.stock) } : i))
           : [...items, { producto, cantidad: Math.min(cantidad, producto.stock) }];
         escribir({ ...carrito, items: nuevos });
-        setAbierto(true);
+        lanzar(producto, origen);
+        toast.success(`${producto.nombre} agregado`, { action: { label: 'Ver carrito', onClick: () => setAbierto(true) }, duration: 2500 });
       },
       cambiarCantidad(id, cantidad) {
         escribir({ ...carrito, items: items.map((i) => (String(i.producto.id) === String(id) ? { ...i, cantidad: Math.max(1, cantidad) } : i)) });
@@ -50,7 +59,7 @@ export function CarritoProvider({ children }) {
       },
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [carrito, abierto, backend.id]);
+  }, [carrito, abierto, backend.id, lanzar]);
 
   return <CarritoContext.Provider value={valor}>{children}</CarritoContext.Provider>;
 }

@@ -45,14 +45,5 @@ export function Paginacion({ meta, alCambiar }) {
   );
 }
 
-export function Modal({ titulo, abierto, alCerrar, children }) {
-  if (!abierto) return null;
-  return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4 backdrop-blur-sm" onClick={alCerrar} role="dialog" aria-modal="true" aria-label={titulo}>
-      <div className="tarjeta w-full max-w-lg animate-aparecer p-6" onClick={(e) => e.stopPropagation()}>
-        <h2 className="mb-4 font-display text-xl font-bold">{titulo}</h2>
-        {children}
-      </div>
-    </div>
-  );
-}
+// Modal accesible (Radix): bloquea el foco dentro, Esc cierra y el lector de pantalla lo anuncia
+export { Ventana as Modal } from './Radix.jsx';

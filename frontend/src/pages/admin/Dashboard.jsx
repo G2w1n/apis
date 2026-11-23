@@ -4,6 +4,9 @@ import { useReporte } from '../../api/consultas.js';
 import { Cargando, ErrorCaja, Vacio } from '../../components/ui.jsx';
 import { ESTADOS, soles } from '../../utils/formato.js';
 import { useTema } from '../../context/TemaContext.jsx';
+import Contador from '../../animacion/Contador.jsx';
+import { useReducedMotion } from 'framer-motion';
+import Aparecer from '../../animacion/Aparecer.jsx';
 
 // Gráficos de una sola serie: un solo color (sin leyenda; el título dice qué se mide).
 // Recharts dibuja SVG con colores fijos, así que elegimos la paleta según el tema.
@@ -12,16 +15,16 @@ const PALETA = {
   claro: { serie: '#0891b2', grilla: '#e2e8f0', eje: '#64748b', etiqueta: '#334155' },
 };
 
-function Kpi({ icono: Icono, titulo, valor, detalle, alerta }) {
+function Kpi({ icono: Icono, titulo, valor, formato, detalle, alerta, indice }) {
   return (
-    <div className="tarjeta p-5">
+    <Aparecer indice={indice} className="tarjeta p-5">
       <div className="flex items-center justify-between">
         <span className="text-sm text-slate-400">{titulo}</span>
         <Icono className={`h-5 w-5 ${alerta ? 'text-amber-300' : 'text-slate-500'}`} aria-hidden />
       </div>
-      <p className="mt-2 font-display text-3xl font-bold tabular-nums">{valor}</p>
+      <p className="mt-2 font-display text-3xl font-bold tabular-nums"><Contador valor={valor} formato={formato} /></p>
       {detalle && <p className="mt-1 text-xs text-slate-500">{detalle}</p>}
-    </div>
+    </Aparecer>
   );
 }
 
@@ -38,6 +41,7 @@ function Consejo({ active, payload, label, formato }) {
 export default function Dashboard() {
   const { data: r, isLoading, isError, error, refetch } = useReporte();
   const c = PALETA[useTema().tema];
+  const animar = !useReducedMotion(); // las barras crecen al cargar, salvo con "reducir movimiento"
   const EJE = { stroke: c.eje, fontSize: 12 };
   if (isLoading) return <Cargando />;
   if (isError) return <ErrorCaja error={error} reintentar={refetch} />;
@@ -49,10 +53,10 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Kpi icono={Banknote} titulo="Ingresos" valor={soles(r.ingresos_totales)} detalle="Pedidos no cancelados" />
-        <Kpi icono={Boxes} titulo="Valor del inventario" valor={soles(r.valor_inventario)} detalle={`${r.unidades_en_stock} unidades en stock`} />
-        <Kpi icono={PackageCheck} titulo="Pedidos" valor={totalPedidos} detalle={`${r.pedidos_por_estado.entregado ?? 0} entregados`} />
-        <Kpi icono={AlertTriangle} titulo="Bajo stock mínimo" valor={r.productos_bajo_stock} detalle={`de ${r.total_productos} productos`} alerta={r.productos_bajo_stock > 0} />
+        <Kpi indice={0} icono={Banknote} titulo="Ingresos" valor={r.ingresos_totales} formato={soles} detalle="Pedidos no cancelados" />
+        <Kpi indice={1} icono={Boxes} titulo="Valor del inventario" valor={r.valor_inventario} formato={soles} detalle={`${r.unidades_en_stock} unidades en stock`} />
+        <Kpi indice={2} icono={PackageCheck} titulo="Pedidos" valor={totalPedidos} detalle={`${r.pedidos_por_estado.entregado ?? 0} entregados`} />
+        <Kpi indice={3} icono={AlertTriangle} titulo="Bajo stock mínimo" valor={r.productos_bajo_stock} detalle={`de ${r.total_productos} productos`} alerta={r.productos_bajo_stock > 0} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-5">
@@ -66,7 +70,7 @@ export default function Dashboard() {
                   <XAxis type="number" allowDecimals={false} tick={EJE} axisLine={false} tickLine={false} />
                   <YAxis type="category" dataKey="nombreCorto" width={170} tick={{ ...EJE, fill: c.etiqueta }} axisLine={false} tickLine={false} />
                   <Tooltip cursor={{ fill: 'rgba(255,255,255,.04)' }} content={<Consejo formato={(v, d) => `${v} unidades · ${soles(d.ingresos)}`} />} />
-                  <Bar dataKey="unidades" isAnimationActive={false} fill={c.serie} radius={[0, 4, 4, 0]} maxBarSize={22} />
+                  <Bar dataKey="unidades" isAnimationActive={animar} animationDuration={700} fill={c.serie} radius={[0, 4, 4, 0]} maxBarSize={22} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -82,7 +86,7 @@ export default function Dashboard() {
                 <XAxis dataKey="estado" tick={EJE} axisLine={false} tickLine={false} />
                 <YAxis allowDecimals={false} tick={EJE} axisLine={false} tickLine={false} width={32} />
                 <Tooltip cursor={{ fill: 'rgba(255,255,255,.04)' }} content={<Consejo formato={(v) => `${v} pedido${v === 1 ? '' : 's'}`} />} />
-                <Bar dataKey="n" isAnimationActive={false} fill={c.serie} radius={[4, 4, 0, 0]} maxBarSize={36} />
+                <Bar dataKey="n" isAnimationActive={animar} animationDuration={700} fill={c.serie} radius={[4, 4, 0, 0]} maxBarSize={36} />
               </BarChart>
             </ResponsiveContainer>
           </div>

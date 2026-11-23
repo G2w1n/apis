@@ -7,6 +7,7 @@ import { useCategorias, useProductos } from '../api/consultas.js';
 import TarjetaProducto from '../components/TarjetaProducto.jsx';
 import { ErrorCaja, Paginacion, Vacio } from '../components/ui.jsx';
 import { GrillaEsqueleto } from '../components/Esqueletos.jsx';
+import Aparecer from '../animacion/Aparecer.jsx';
 
 const ORDENES = [
   { valor: 'nombre', texto: 'Nombre A-Z' },
@@ -119,7 +120,7 @@ export default function Catalogo() {
             : lista.length === 0 ? <Vacio titulo="Sin resultados" texto="Prueba con otra búsqueda o limpia los filtros." />
             : (
               <div className={`grid gap-5 sm:grid-cols-2 xl:grid-cols-3 ${productos.isFetching ? 'opacity-60' : ''}`}>
-                {lista.map((p) => <TarjetaProducto key={p.id} producto={p} editable={editable} />)}
+                {lista.map((p, i) => <Aparecer key={p.id} indice={i}><TarjetaProducto producto={p} editable={editable} /></Aparecer>)}
               </div>
             )}
           <Paginacion meta={productos.data?.meta} alCambiar={(page) => { cambiar({ page: String(page) }); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />
