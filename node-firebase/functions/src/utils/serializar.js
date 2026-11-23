@@ -25,7 +25,11 @@ export const pedidoJSON = (id, p) => ({
   id,
   usuario_id: p.usuario_id,
   estado: p.estado,
+  subtotal: p.subtotal ?? p.total, // pedidos anteriores al checkout no tenían envío
+  costo_envio: p.costo_envio ?? 0,
   total: p.total,
+  envio: p.envio ?? null,
+  pago: p.pago ?? null,
   items: p.items,
   historial: (p.historial || []).map((h) => ({ estado: h.estado, fecha: iso(h.fecha) })),
   created_at: iso(p.created_at),

@@ -4,7 +4,16 @@
       "source": "functions",
       "codebase": "default",
       "runtime": "nodejs22",
-      "ignore": ["node_modules", ".git", "*.local", "scripts", "serviceAccount*.json"]
+      "ignore": [
+        "node_modules",
+        ".git",
+        "*.local",
+        "scripts",
+        "serviceAccount*.json"
+      ],
+      "predeploy": [
+        "cp ../shared/envios.json ../shared/openapi.yaml ../shared/docs.html ../shared/docs.js \"$RESOURCE_DIR\"/"
+      ]
     }
   ],
   "firestore": {
@@ -13,17 +22,41 @@
   },
   "hosting": {
     "public": "public",
-    "ignore": ["firebase.json", "**/.*"],
+    "ignore": [
+      "firebase.json",
+      "**/.*"
+    ],
     "rewrites": [
-      { "source": "/api/**", "function": { "functionId": "api", "region": "southamerica-east1" } },
-      { "source": "/health", "function": { "functionId": "api", "region": "southamerica-east1" } }
+      {
+        "source": "/api/**",
+        "function": {
+          "functionId": "api",
+          "region": "southamerica-east1"
+        }
+      },
+      {
+        "source": "/health",
+        "function": {
+          "functionId": "api",
+          "region": "southamerica-east1"
+        }
+      }
     ]
   },
   "emulators": {
-    "functions": { "port": 5001 },
-    "firestore": { "port": 8080 },
-    "hosting": { "port": 5000 },
-    "ui": { "enabled": true, "port": 4000 },
+    "functions": {
+      "port": 5001
+    },
+    "firestore": {
+      "port": 8080
+    },
+    "hosting": {
+      "port": 5000
+    },
+    "ui": {
+      "enabled": true,
+      "port": 4000
+    },
     "singleProjectMode": true
   }
 }

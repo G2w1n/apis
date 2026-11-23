@@ -11,7 +11,7 @@ r.use(autenticar);
 // (doble clic, red inestable) recibe el mismo pedido en vez de crear uno duplicado.
 r.post('/', validar(pedidoSchema), async (req, res) => {
   const clave = req.get('Idempotency-Key');
-  const { pedido, repetido } = await pedidos.crear(req.usuario.id, req.body.items, clave);
+  const { pedido, repetido } = await pedidos.crear(req.usuario.id, req.body.items, clave, req.body);
   if (repetido) res.set('Idempotent-Replayed', 'true');
   res.status(repetido ? 200 : 201).json(pedido);
 });

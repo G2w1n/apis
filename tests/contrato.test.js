@@ -450,3 +450,79 @@ describe('Documentación', () => {
     assert.match(await spec.text(), /openapi: 3/);
   });
 });
+
+describe('Checkout (envío y pago)', () => {
+  const envio = (extra = {}) => ({ nombre: 'Ana Pérez', telefono: '987654321', direccion: 'Av. Real 123', distrito: 'El Tambo', ...extra });
+
+  it('publica las tarifas de envío', async () => {
+    const r = await api('GET', '/envios/tarifas');
+    assert.equal(r.status, 200);
+    assert.equal(r.body.gratis_desde, 500);
+    const tambo = r.body.distritos.find((d) => d.distrito === 'El Tambo');
+    assert.equal(tambo.costo, 8);
+    assert.deepEqual(r.body.metodos_pago, ['tarjeta', 'yape', 'contraentrega']);
+  });
+
+  it('el servidor calcula el envío y lo suma al total', async () => {
+    const p = await crearProducto(admin, { precio: 100, stock: 10 });
+    const r = await api('POST', '/pedidos', {
+      token: cliente.token,
+      body: { items: [{ producto_id: p.id, cantidad: 2 }], envio: envio(), pago: { metodo: 'tarjeta', tarjeta_ultimos4: '4242' } },
+    });
+    assert.equal(r.status, 201);
+    assert.equal(r.body.subtotal, 200);
+    assert.equal(r.body.costo_envio, 8);
+    assert.equal(r.body.total, 208);
+    assert.equal(r.body.envio.distrito, 'El Tambo');
+    assert.equal(r.body.envio.dias, 1);
+    assert.deepEqual(r.body.pago, { metodo: 'tarjeta', tarjeta_ultimos4: '4242' });
+    const leido = await api('GET', `/pedidos/${r.body.id}`, { token: cliente.token });
+    assert.equal(leido.body.costo_envio, 8);
+    assert.equal(leido.body.envio.direccion, 'Av. Real 123');
+  });
+
+  it('envío gratis desde S/ 500', async () => {
+    const p = await crearProducto(admin, { precio: 250, stock: 10 });
+    const r = await api('POST', '/pedidos', { token: cliente.token, body: { items: [{ producto_id: p.id, cantidad: 2 }], envio: envio({ distrito: 'Cusco' }), pago: { metodo: 'yape' } } });
+    assert.equal(r.status, 201);
+    assert.equal(r.body.costo_envio, 0);
+    assert.equal(r.body.total, 500);
+  });
+
+  it('sin datos de envío el pedido no cobra envío (compatibilidad)', async () => {
+    const p = await crearProducto(admin, { precio: 10, stock: 5 });
+    const r = await api('POST', '/pedidos', { token: cliente.token, body: { items: [{ producto_id: p.id, cantidad: 1 }] } });
+    assert.equal(r.status, 201);
+    assert.equal(r.body.subtotal, 10);
+    assert.equal(r.body.costo_envio, 0);
+    assert.equal(r.body.envio, null);
+    assert.equal(r.body.pago, null);
+  });
+
+  it('rechaza distritos sin cobertura y datos de pago inválidos', async () => {
+    const p = await crearProducto(admin, { precio: 10, stock: 5 });
+    const pedir = (body) => api('POST', '/pedidos', { token: cliente.token, body: { items: [{ producto_id: p.id, cantidad: 1 }], ...body } });
+    const distrito = await pedir({ envio: envio({ distrito: 'Narnia' }), pago: { metodo: 'yape' } });
+    assert.equal(distrito.status, 422);
+    assert.equal(codigo(distrito), 'DISTRITO_SIN_COBERTURA');
+    const tarjeta = await pedir({ envio: envio(), pago: { metodo: 'tarjeta', tarjeta_ultimos4: '12' } });
+    assert.equal(tarjeta.status, 400);
+    const metodo = await pedir({ envio: envio(), pago: { metodo: 'bitcoin' } });
+    assert.equal(metodo.status, 400);
+    const telefono = await pedir({ envio: envio({ telefono: 'abc' }), pago: { metodo: 'yape' } });
+    assert.equal(telefono.status, 400);
+    const sinPago = await pedir({ envio: envio() });
+    assert.equal(sinPago.status, 400, 'si hay envío, el método de pago es obligatorio');
+    assert.equal((await api('GET', `/productos/${p.id}`)).body.stock, 5, 'ningún rechazo descuenta stock');
+  });
+
+  it('nunca guarda el número completo de la tarjeta', async () => {
+    const p = await crearProducto(admin, { precio: 10, stock: 5 });
+    const r = await api('POST', '/pedidos', {
+      token: cliente.token,
+      body: { items: [{ producto_id: p.id, cantidad: 1 }], envio: envio(), pago: { metodo: 'tarjeta', tarjeta_ultimos4: '4242', numero: '4242424242424242' } },
+    });
+    assert.equal(r.status, 400, 'campos extra en el pago se rechazan');
+    assert.ok(!JSON.stringify(r.body).includes('4242424242424242'));
+  });
+});

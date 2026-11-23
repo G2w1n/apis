@@ -16,7 +16,7 @@ class Pedido < ApplicationRecord
 
   def as_json(*)
     {
-      id:, usuario_id:, estado:, total: total.to_f,
+      id:, usuario_id:, estado:, subtotal: subtotal.to_f, costo_envio: costo_envio.to_f, total: total.to_f, envio:, pago:,
       items: items.map(&:as_json),
       historial: historial.map { |h| { estado: h.estado, fecha: h.fecha.iso8601(3) } },
       created_at: created_at.iso8601(3)

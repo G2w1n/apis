@@ -1,5 +1,6 @@
 class SaludController < ApplicationController
   def show = render(json: { status: "ok", framework: "rails", base_datos: "postgresql" })
+  def tarifas = render(json: EnviosService::TARIFAS)
 
   # Página de bienvenida: quien abra la URL base ve qué API es y qué rutas tiene
   def inicio

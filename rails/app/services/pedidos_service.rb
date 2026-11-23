@@ -7,11 +7,12 @@ module PedidosService
   module_function
 
   # Devuelve [pedido, repetido]. Si la Idempotency-Key ya se usó, devuelve el pedido original.
-  def crear(usuario, items, clave = nil)
+  def crear(usuario, items, clave = nil, envio: nil, pago: nil)
     if clave && (previo = usuario.pedidos.find_by(idempotency_key: clave))
       return [ previo, true ]
     end
-    [ crear_atomico(usuario, agrupar(items), clave), false ]
+    EnviosService.cotizar(envio[:distrito], 0) if envio # valida la cobertura antes de tocar el stock
+    [ crear_atomico(usuario, agrupar(items), clave, envio, pago), false ]
   rescue ActiveRecord::RecordNotUnique
     # Dos peticiones con la misma clave llegaron a la vez: el índice UNIQUE frenó a una
     previo = usuario.pedidos.find_by(idempotency_key: clave)
@@ -22,7 +23,7 @@ module PedidosService
     items.each_with_object(Hash.new(0)) { |i, h| h[i[:producto_id]] += i[:cantidad] }
   end
 
-  def crear_atomico(usuario, cantidades, clave)
+  def crear_atomico(usuario, cantidades, clave, envio = nil, pago = nil)
     ActiveRecord::Base.transaction do
       # Ordenar por id evita deadlocks cuando dos pedidos bloquean los mismos productos
       productos = Producto.activos.where(id: cantidades.keys).order(:id).lock.index_by(&:id)
@@ -38,8 +39,11 @@ module PedidosService
       raise ErrorNegocio.new(409, "STOCK_INSUFICIENTE", "No hay stock suficiente", sin_stock) if sin_stock.any?
 
       # BigDecimal = aritmética exacta: 0.1 + 0.2 == 0.3
-      total = cantidades.sum(BigDecimal("0")) { |id, cant| productos[id].precio * cant }
-      pedido = usuario.pedidos.create!(total:, idempotency_key: clave)
+      subtotal = cantidades.sum(BigDecimal("0")) { |id, cant| productos[id].precio * cant }
+      costo_envio, tarifa = envio ? EnviosService.cotizar(envio[:distrito], subtotal) : [ BigDecimal("0"), nil ]
+      datos_envio = envio&.merge(distrito: tarifa["distrito"], zona: tarifa["zona"], dias: tarifa["dias"])
+      pedido = usuario.pedidos.create!(subtotal:, costo_envio:, total: subtotal + costo_envio,
+                                       envio: datos_envio, pago:, idempotency_key: clave)
       pedido.historial.create!(estado: "pendiente")
 
       cantidades.each do |id, cant|

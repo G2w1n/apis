@@ -183,7 +183,7 @@ def pedidos(request):
     if request.method == 'POST':
         datos = _validar(PedidoEntradaSerializer, request)
         clave = request.headers.get('Idempotency-Key')
-        pedido, repetido = servicios.crear_pedido(request.user, datos['items'], clave)
+        pedido, repetido = servicios.crear_pedido(request.user, datos['items'], clave, datos.get('envio'), datos.get('pago'))
         pedido = servicios.pedidos_visibles(request.user).get(pk=pedido.pk)
         respuesta = Response(PedidoSerializer(pedido).data, status=200 if repetido else 201)
         if repetido:
@@ -247,6 +247,13 @@ def alertas(request):
 @permission_classes([IsAuthenticated, EsAdmin])
 def reporte(request):
     return Response(servicios.reporte())
+
+
+# ---------- Envíos ----------
+
+@api_view(['GET'])
+def tarifas_envio(request):
+    return Response(servicios.TARIFAS)
 
 
 # ---------- Auditoría ----------

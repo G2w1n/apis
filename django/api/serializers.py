@@ -70,8 +70,49 @@ class ItemPedidoSerializer(serializers.Serializer):
     cantidad = serializers.IntegerField(min_value=1, max_value=1000)
 
 
+class EstrictoSerializer(serializers.Serializer):
+    """Rechaza campos desconocidos (por ejemplo, un número de tarjeta completo)."""
+
+    def to_internal_value(self, datos):
+        if isinstance(datos, dict):
+            extra = set(datos) - set(self.fields)
+            if extra:
+                raise serializers.ValidationError({campo: 'Campo no permitido' for campo in sorted(extra)})
+        return super().to_internal_value(datos)
+
+
+class EnvioSerializer(EstrictoSerializer):
+    nombre = serializers.CharField(max_length=100)
+    telefono = serializers.RegexField(r'^\+?[0-9 ]{6,15}$', error_messages={'invalid': 'Teléfono inválido'})
+    direccion = serializers.CharField(max_length=200)
+    distrito = serializers.CharField(max_length=60)
+    referencia = serializers.CharField(max_length=200, required=False, allow_blank=True, default='')
+
+
+class PagoSerializer(EstrictoSerializer):
+    """Pago simulado: solo se guardan los últimos 4 dígitos."""
+    metodo = serializers.ChoiceField(choices=['tarjeta', 'yape', 'contraentrega'])
+    tarjeta_ultimos4 = serializers.RegexField(r'^\d{4}$', required=False, error_messages={'invalid': 'Deben ser 4 dígitos'})
+
+    def validate(self, datos):
+        if datos['metodo'] == 'tarjeta' and not datos.get('tarjeta_ultimos4'):
+            raise serializers.ValidationError({'tarjeta_ultimos4': 'Es obligatorio para pagar con tarjeta'})
+        if datos['metodo'] != 'tarjeta' and datos.get('tarjeta_ultimos4'):
+            raise serializers.ValidationError({'tarjeta_ultimos4': 'Solo aplica a tarjeta'})
+        return datos
+
+
 class PedidoEntradaSerializer(serializers.Serializer):
     items = ItemPedidoSerializer(many=True, allow_empty=False, max_length=50)
+    envio = EnvioSerializer(required=False)
+    pago = PagoSerializer(required=False)
+
+    def validate(self, datos):
+        if 'envio' in datos and 'pago' not in datos:
+            raise serializers.ValidationError({'pago': 'Indica el método de pago'})
+        if 'pago' in datos and 'envio' not in datos:
+            raise serializers.ValidationError({'envio': 'Indica los datos de envío'})
+        return datos
 
 
 class EstadoSerializer(serializers.Serializer):
@@ -127,7 +168,7 @@ class PedidoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Pedido
-        fields = ['id', 'usuario_id', 'estado', 'total', 'items', 'historial', 'created_at']
+        fields = ['id', 'usuario_id', 'estado', 'subtotal', 'costo_envio', 'total', 'envio', 'pago', 'items', 'historial', 'created_at']
 
     def get_historial(self, pedido):
         return [{'estado': h.estado, 'fecha': h.fecha} for h in pedido.historial.all()]

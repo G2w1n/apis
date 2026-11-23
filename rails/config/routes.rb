@@ -30,6 +30,7 @@ Rails.application.routes.draw do
     end
 
     get "auditoria", to: "auditoria#index"
+    get "envios/tarifas", to: "salud#tarifas"
   end
 
   match "*ruta", to: "application#ruta_no_encontrada", via: :all

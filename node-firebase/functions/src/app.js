@@ -7,6 +7,7 @@ import productosRoutes from './routes/productos.js';
 import pedidosRoutes from './routes/pedidos.js';
 import stockRoutes from './routes/stock.js';
 import auditoriaRoutes from './routes/auditoria.js';
+import { TARIFAS } from './services/envios.js';
 import { rutaNoEncontrada, manejarErrores } from './middleware/errores.js';
 import { opcionesCors, limiteGeneral } from './middleware/seguridad.js';
 import { registrarDocs } from './docs.js';
@@ -41,6 +42,7 @@ v1.use('/productos', productosRoutes);
 v1.use('/pedidos', pedidosRoutes);
 v1.use('/stock', stockRoutes);
 v1.use('/auditoria', auditoriaRoutes);
+v1.get('/envios/tarifas', (_req, res) => res.json(TARIFAS));
 app.use('/api/v1', v1);
 
 app.use(rutaNoEncontrada);

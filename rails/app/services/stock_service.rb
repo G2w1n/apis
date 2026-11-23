@@ -23,7 +23,7 @@ module StockService
     por_estado = Pedido::ESTADOS.index_with(0).merge(Pedido.group(:estado).count)
     vendidos = DetallePedido.joins(:pedido).where.not(pedidos: { estado: "cancelado" })
                             .group(:producto_id, :nombre).order("sum_cantidad DESC").limit(5)
-                            .pluck(:producto_id, :nombre, Arel.sql("SUM(cantidad) AS sum_cantidad"), Arel.sql("SUM(subtotal)"))
+                            .pluck(:producto_id, :nombre, Arel.sql("SUM(cantidad) AS sum_cantidad"), Arel.sql("SUM(detalles_pedido.subtotal)"))
     {
       total_productos: activos.count,
       unidades_en_stock: activos.sum(:stock),

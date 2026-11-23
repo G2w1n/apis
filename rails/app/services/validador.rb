@@ -91,6 +91,25 @@ class Validador
     end
   end
 
+  # Texto que debe cumplir una expresión regular (ej. teléfono, últimos 4 dígitos)
+  def formato(campo, regex, mensaje, opcional: false)
+    leer(campo, opcional) do |v|
+      v.is_a?(String) && v.strip.match?(regex) ? v.strip : error(campo, mensaje)
+    end
+  end
+
+  # Objeto anidado con campos permitidos: cualquier otro (ej. el número completo de una tarjeta) se rechaza
+  def objeto(campo, permitidos:, opcional: true)
+    leer(campo, opcional) do |v|
+      next error(campo, "Debe ser un objeto") unless v.is_a?(Hash)
+      extra = v.keys - permitidos.map(&:to_s)
+      extra.each { |k| @errores << { campo: "#{campo}.#{k}", mensaje: "Campo no permitido" } }
+      sub = yield Validador.new(v)
+      sub.errores.each { |e| @errores << { campo: "#{campo}.#{e[:campo]}", mensaje: e[:mensaje] } }
+      extra.any? || sub.errores.any? ? :invalido : sub.limpio
+    end
+  end
+
   def prohibir(campo, mensaje)
     error(campo, mensaje) if @datos.key?(campo.to_s)
     self

@@ -57,9 +57,33 @@ export const productoUpdateSchema = productoSchema
     if (Object.keys(d).length === 0) ctx.addIssue({ code: 'custom', message: 'Envíe al menos un campo' });
   });
 
+export const METODOS_PAGO = ['tarjeta', 'yape', 'contraentrega'];
+
+const envioSchema = z.object({
+  nombre: texto(100),
+  telefono: z.string().trim().regex(/^\+?[0-9 ]{6,15}$/, 'Teléfono inválido'),
+  direccion: texto(200),
+  distrito: texto(60),
+  referencia: z.string().trim().max(200).optional().default(''),
+}).strict();
+
+// El pago es simulado: solo se guardan los últimos 4 dígitos; cualquier otro campo (como el número completo) se rechaza
+const pagoSchema = z.object({
+  metodo: z.enum(METODOS_PAGO, { errorMap: () => ({ message: `Debe ser uno de: ${METODOS_PAGO.join(', ')}` }) }),
+  tarjeta_ultimos4: z.string().regex(/^\d{4}$/, 'Deben ser 4 dígitos').optional(),
+}).strict().superRefine((p, ctx) => {
+  if (p.metodo === 'tarjeta' && !p.tarjeta_ultimos4) ctx.addIssue({ code: 'custom', path: ['tarjeta_ultimos4'], message: 'Es obligatorio para pagar con tarjeta' });
+  if (p.metodo !== 'tarjeta' && p.tarjeta_ultimos4) ctx.addIssue({ code: 'custom', path: ['tarjeta_ultimos4'], message: 'Solo aplica a tarjeta' });
+});
+
 export const pedidoSchema = z.object({
   items: z.array(z.object({ producto_id: id, cantidad: entero(1).max(1000) }))
     .min(1, 'El pedido debe tener al menos un producto').max(50),
+  envio: envioSchema.optional(),
+  pago: pagoSchema.optional(),
+}).superRefine((p, ctx) => {
+  if (p.envio && !p.pago) ctx.addIssue({ code: 'custom', path: ['pago'], message: 'Indica el método de pago' });
+  if (p.pago && !p.envio) ctx.addIssue({ code: 'custom', path: ['envio'], message: 'Indica los datos de envío' });
 });
 
 export const ESTADOS = ['pendiente', 'pagado', 'enviado', 'entregado', 'cancelado'];

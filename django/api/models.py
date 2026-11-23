@@ -95,7 +95,11 @@ class Pedido(models.Model):
 
     usuario = models.ForeignKey(Usuario, on_delete=models.PROTECT, related_name='pedidos')
     estado = models.CharField(max_length=10, choices=Estado.choices, default=Estado.PENDIENTE)
+    subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    costo_envio = models.DecimalField(max_digits=8, decimal_places=2, default=0)
     total = models.DecimalField(max_digits=12, decimal_places=2)
+    envio = models.JSONField(null=True, blank=True)  # nombre, teléfono, dirección, distrito, zona, días
+    pago = models.JSONField(null=True, blank=True)   # método y últimos 4 dígitos (nunca el número completo)
     idempotency_key = models.CharField(max_length=100, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

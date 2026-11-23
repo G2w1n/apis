@@ -6,3 +6,8 @@ firestore-debug.log*
 ui-debug.log*
 .firebase/
 serviceAccount*.json
+# Copias de /shared que se generan al desplegar en Cloud Functions
+functions/envios.json
+functions/openapi.yaml
+functions/docs.html
+functions/docs.js

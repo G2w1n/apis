@@ -6,6 +6,7 @@ import { leerPaginacion, paginar } from '../utils/paginacion.js';
 import { pedidoJSON } from '../utils/serializar.js';
 import { conCandado } from '../utils/candado.js';
 import * as auditoria from './auditoria.js';
+import { cotizar } from './envios.js';
 
 // Máquina de estados: qué transiciones están permitidas desde cada estado
 export const TRANSICIONES = {
@@ -38,8 +39,9 @@ const refIdempotencia = (usuarioId, clave) =>
  * Si dos clientes compran el último producto al mismo tiempo, Firestore detecta el
  * conflicto, reintenta una de las transacciones y esta vez verá stock 0 → no hay sobreventa.
  */
-export async function crear(usuarioId, itemsSolicitados, claveIdempotencia) {
+export async function crear(usuarioId, itemsSolicitados, claveIdempotencia, { envio, pago } = {}) {
   const items = agruparItems(itemsSolicitados);
+  if (envio) cotizar(envio.distrito, 0); // valida la cobertura antes de tocar el stock
   const pedidoRef = col.pedidos.doc();
   const idemRef = claveIdempotencia ? refIdempotencia(usuarioId, claveIdempotencia) : null;
 
@@ -89,8 +91,15 @@ export async function crear(usuarioId, itemsSolicitados, claveIdempotencia) {
       };
     });
 
+    // El costo de envío lo decide el servidor (el cliente no puede mandar un envío "gratis")
+    const cotizacion = envio ? cotizar(envio.distrito, totalCentimos) : null;
+    const costoCentimos = cotizacion?.costoCentimos ?? 0;
     const pedido = {
-      usuario_id: usuarioId, estado: 'pendiente', total: aSoles(totalCentimos), items: lineas,
+      usuario_id: usuarioId, estado: 'pendiente',
+      subtotal: aSoles(totalCentimos), costo_envio: aSoles(costoCentimos), total: aSoles(totalCentimos + costoCentimos),
+      envio: cotizacion ? { ...envio, distrito: cotizacion.distrito, zona: cotizacion.zona, dias: cotizacion.dias } : null,
+      pago: pago ?? null,
+      items: lineas,
       historial: [{ estado: 'pendiente', fecha: ahora }], created_at: ahora,
     };
     tx.create(pedidoRef, pedido);

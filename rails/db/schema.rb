@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_27_000001) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_23_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -83,6 +83,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_27_000001) do
     t.string "idempotency_key"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.decimal "subtotal", precision: 12, scale: 2, default: "0.0", null: false
+    t.decimal "costo_envio", precision: 8, scale: 2, default: "0.0", null: false
+    t.jsonb "envio"
+    t.jsonb "pago"
     t.index ["usuario_id", "idempotency_key"], name: "index_pedidos_on_usuario_id_and_idempotency_key", unique: true, where: "(idempotency_key IS NOT NULL)"
     t.index ["usuario_id"], name: "index_pedidos_on_usuario_id"
   end

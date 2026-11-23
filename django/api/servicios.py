@@ -7,14 +7,31 @@ Estrategia anti-sobreventa en PostgreSQL:
                            una segunda compra simultánea ESPERA y luego ve el stock ya descontado.
   CheckConstraint       -> la base de datos rechaza stock < 0 aunque el código fallara.
 """
+import json
 from collections import OrderedDict
 from decimal import Decimal
+from pathlib import Path
+
+from django.conf import settings
 
 from django.db import IntegrityError, transaction
 from django.db.models import Count, F, Sum
 
 from .errores import ErrorNegocio, no_encontrado
 from .models import Auditoria, Categoria, DetallePedido, HistorialEstado, MovimientoStock, Pedido, Producto
+
+
+# Tarifas de envío compartidas por las 3 APIs. El costo SIEMPRE lo calcula el servidor.
+TARIFAS = json.loads((Path(settings.BASE_DIR).parent / 'shared' / 'envios.json').read_text(encoding='utf-8'))
+
+
+def cotizar_envio(distrito, subtotal):
+    tarifa = next((d for d in TARIFAS['distritos'] if d['distrito'].lower() == distrito.strip().lower()), None)
+    if not tarifa:
+        raise ErrorNegocio(422, 'DISTRITO_SIN_COBERTURA', f'Aún no hacemos envíos a {distrito}',
+                           {'distritos': [d['distrito'] for d in TARIFAS['distritos']]})
+    gratis = subtotal >= Decimal(str(TARIFAS['gratis_desde']))
+    return Decimal('0') if gratis else Decimal(str(tarifa['costo'])), tarifa
 
 
 def auditar(usuario, ip, accion, entidad, entidad_id, detalle=None):
@@ -99,14 +116,16 @@ def _agrupar(items):
     return agrupados
 
 
-def crear_pedido(usuario, items, clave_idempotencia=None):
+def crear_pedido(usuario, items, clave_idempotencia=None, envio=None, pago=None):
     """Devuelve (pedido, repetido). Si la Idempotency-Key ya se usó, devuelve el pedido original."""
     if clave_idempotencia:
         previo = Pedido.objects.filter(usuario=usuario, idempotency_key=clave_idempotencia).first()
         if previo:
             return previo, True
+    if envio:
+        cotizar_envio(envio['distrito'], Decimal('0'))  # valida la cobertura antes de tocar el stock
     try:
-        return _crear_pedido_atomico(usuario, _agrupar(items), clave_idempotencia), False
+        return _crear_pedido_atomico(usuario, _agrupar(items), clave_idempotencia, envio, pago), False
     except IntegrityError:
         # Dos peticiones con la misma clave llegaron a la vez: la restricción UNIQUE frenó a una
         previo = Pedido.objects.filter(usuario=usuario, idempotency_key=clave_idempotencia).first()
@@ -116,7 +135,7 @@ def crear_pedido(usuario, items, clave_idempotencia=None):
 
 
 @transaction.atomic
-def _crear_pedido_atomico(usuario, cantidades, clave_idempotencia):
+def _crear_pedido_atomico(usuario, cantidades, clave_idempotencia, envio=None, pago=None):
     # Ordenar por id evita deadlocks cuando dos pedidos bloquean los mismos productos
     productos = {p.id: p for p in Producto.objects.select_for_update().filter(pk__in=cantidades, activo=True).order_by('id')}
 
@@ -131,8 +150,11 @@ def _crear_pedido_atomico(usuario, cantidades, clave_idempotencia):
         raise ErrorNegocio(409, 'STOCK_INSUFICIENTE', 'No hay stock suficiente', sin_stock)
 
     # Decimal = aritmética exacta: 0.1 + 0.2 == 0.3
-    total = sum((productos[pid].precio * cant for pid, cant in cantidades.items()), Decimal('0'))
-    pedido = Pedido.objects.create(usuario=usuario, total=total, idempotency_key=clave_idempotencia)
+    subtotal = sum((productos[pid].precio * cant for pid, cant in cantidades.items()), Decimal('0'))
+    costo_envio, tarifa = cotizar_envio(envio['distrito'], subtotal) if envio else (Decimal('0'), None)
+    datos_envio = {**envio, 'distrito': tarifa['distrito'], 'zona': tarifa['zona'], 'dias': tarifa['dias']} if envio else None
+    pedido = Pedido.objects.create(usuario=usuario, subtotal=subtotal, costo_envio=costo_envio, total=subtotal + costo_envio,
+                                   envio=datos_envio, pago=pago and dict(pago), idempotency_key=clave_idempotencia)
     HistorialEstado.objects.create(pedido=pedido, estado='pendiente')
 
     for pid, cant in cantidades.items():

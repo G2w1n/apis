@@ -13,7 +13,7 @@ Sistema de **productos, pedidos y control de stock** construido **tres veces**, 
 Además, **[Voltec](frontend/)** es una tienda en **React** que consume cualquiera de las 3 APIs (se cambia en vivo):
 👉 **https://g2w1n-voltec.onrender.com**
 
-Una **única batería de 43 pruebas** ([`tests/contrato.test.js`](tests/contrato.test.js)) se ejecuta contra las tres
+Una **única batería de 49 pruebas** ([`tests/contrato.test.js`](tests/contrato.test.js)) se ejecuta contra las tres
 y las tres la pasan. Así, la comparación entre frameworks se basa en código que hace exactamente lo mismo, no en opiniones.
 
 Trabajo de la asignatura *Desarrollo de Aplicaciones Web* — Unidad 3: Frameworks de desarrollo Frontend y Backend.
@@ -36,7 +36,7 @@ Trabajo de la asignatura *Desarrollo de Aplicaciones Web* — Unidad 3: Framewor
 | **Errores uniformes** | Todas las APIs responden `{ "error": { "codigo", "mensaje", "detalles" } }` con el mismo código HTTP. |
 | **Benchmark** | Mide lecturas y pedidos concurrentes en las tres APIs con la misma carga ([`docs/benchmark.md`](docs/benchmark.md)). |
 | **Panel web** | Frontend en Firebase Hosting que funciona con **cualquiera** de las 3 APIs, con una demo de concurrencia en vivo. |
-| **CI** | GitHub Actions ejecuta las 43 pruebas contra las 3 APIs en cada `push` y compila el frontend. |
+| **CI** | GitHub Actions ejecuta las 49 pruebas contra las 3 APIs en cada `push` y compila el frontend. |
 | **Anti fuerza bruta** | 5 logins fallidos para un email desde la misma IP lo bloquean 15 min (`429` + `Retry-After`). Se guarda en la base de datos para que valga en todas las instancias. |
 | **Límite de peticiones** | Máximo `RATE_LIMIT_POR_MINUTO` (600 por defecto) peticiones por IP y minuto. |
 | **CORS restringido** | Solo Voltec, el panel, Firebase Hosting y `localhost` pueden llamar a la API desde un navegador. |
@@ -99,7 +99,7 @@ y el nombre de la categoría se **desnormaliza** dentro del producto. Así se ev
 | POST | `/productos` | admin | Crea un producto (el stock inicial se registra en el kardex) |
 | PUT/PATCH | `/productos/:id` | admin | Edita (el `stock` **no** se puede editar aquí) |
 | DELETE | `/productos/:id` | admin | Borrado lógico |
-| POST | `/pedidos` | autenticado | Crea un pedido y descuenta stock. Header opcional `Idempotency-Key` |
+| POST | `/pedidos` | autenticado | Crea un pedido y descuenta stock. Opcional: `envio` y `pago` (el servidor calcula el envío). Header opcional `Idempotency-Key` |
 | GET | `/pedidos` | autenticado | Mis pedidos (admin: todos). Filtro `estado` |
 | GET | `/pedidos/:id` | dueño o admin | Detalle con items e historial |
 | PATCH | `/pedidos/:id/estado` | admin | Cambia el estado según la máquina de estados |
@@ -108,6 +108,7 @@ y el nombre de la categoría se **desnormaliza** dentro del producto. Así se ev
 | GET | `/stock/movimientos` | admin | Kardex (`producto_id`, `tipo`) |
 | GET | `/stock/alertas` | admin | Productos en o bajo su stock mínimo |
 | GET | `/stock/reporte` | admin | Valor del inventario, ingresos, pedidos por estado, más vendidos |
+| GET | `/envios/tarifas` | público | Distritos con cobertura, costo de envío (gratis desde S/ 500) y métodos de pago |
 | GET | `/auditoria` | admin | Registro de cambios (`entidad`, `entidad_id`, `accion`) |
 | GET | `/docs` (raíz) | público | Documentación Swagger interactiva |
 
