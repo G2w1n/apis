@@ -6,7 +6,7 @@ import { useConsola } from './ConsolaContext.jsx';
 
 const AuthContext = createContext(null);
 
-// La sesión se guarda POR API: un usuario de Django no existe en Rails (son bases distintas)
+// La sesión se guarda POR API: la sesión local no sirve en Render (son bases distintas)
 export function AuthProvider({ children }) {
   const { backend, setLento } = useBackend();
   const { registrar } = useConsola();

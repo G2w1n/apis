@@ -1,4 +1,4 @@
-// Borra los datos y carga ../../shared/seed.json (los mismos datos que usan Django y Rails)
+// Borra los datos y carga ../../shared/seed.json (datos de ejemplo compartidos con las pruebas)
 import { readFile } from 'node:fs/promises';
 import { db, col, exigirCredenciales } from '../src/firebase.js';
 import * as usuarios from '../src/services/usuarios.js';

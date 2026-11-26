@@ -1,4 +1,4 @@
-// Tarifas de envío compartidas por las 3 APIs (shared/envios.json). El costo SIEMPRE lo calcula el servidor.
+// Tarifas de envío (shared/envios.json). El costo SIEMPRE lo calcula el servidor.
 import { existsSync, readFileSync } from 'node:fs';
 import { AppError } from '../utils/AppError.js';
 import { aCentimos } from '../utils/dinero.js';

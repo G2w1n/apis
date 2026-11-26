@@ -1,4 +1,4 @@
-// Cliente HTTP mínimo (fetch nativo de Node 20+) para probar cualquiera de las 3 APIs
+// Cliente HTTP mínimo (fetch nativo de Node 20+) para probar la API
 export const BASE = (process.env.BASE_URL || 'http://localhost:3000/api/v1').replace(/\/$/, '');
 // Raíz del servidor (donde viven /docs y /openapi.yaml)
 export const RAIZ = BASE.replace(/\/api\/v1$/, '');

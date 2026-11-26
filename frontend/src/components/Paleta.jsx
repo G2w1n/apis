@@ -141,13 +141,13 @@ export default function Paleta() {
                 ? <Command.Item className={item} onSelect={() => ejecutar(() => { navegar('/'); logout(); })}><LogOut className="h-4 w-4" />Cerrar sesión</Command.Item>
                 : <Command.Item className={item} onSelect={() => ejecutar(() => navegar('/login'))}><LogIn className="h-4 w-4" />Iniciar sesión</Command.Item>}
             </Grupo>
-            <Grupo titulo="Cambiar de API">
+            {OPCIONES.length > 1 && <Grupo titulo="Cambiar de API">
               {OPCIONES.map((o) => (
                 <Command.Item key={o.id} className={item} onSelect={() => ejecutar(() => cambiarBackend(o.id))}>
                   <Server className="h-4 w-4" />{o.nombre}{o.id === backend.id && <span className="ml-auto text-xs text-acento">actual</span>}
                 </Command.Item>
               ))}
-            </Grupo>
+            </Grupo>}
           </>
         )}
       </Command.List>

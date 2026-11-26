@@ -1,20 +1,15 @@
-# 🛒 Tienda API — el mismo backend en 3 frameworks
+# 🛒 Tienda API — Express + Firebase
 
 [![Pruebas de contrato](https://github.com/G2w1n/apis/actions/workflows/contrato.yml/badge.svg)](https://github.com/G2w1n/apis/actions/workflows/contrato.yml)
 
-Sistema de **productos, pedidos y control de stock** construido **tres veces**, con el mismo contrato HTTP:
+Sistema de **productos, pedidos y control de stock** hecho con **Node.js + Express 5** y **Firebase Firestore** (NoSQL),
+publicado en Render.
 
-| Carpeta | Framework | Base de datos | Puerto local |
-|---|---|---|---|
-| [`node-firebase/`](node-firebase/) | **Node.js + Express 5** (Cloud Functions) | **Firebase Firestore** (NoSQL) | 3000 |
-| [`django/`](django/) | **Django 5 + Django REST Framework** | **PostgreSQL** (SQL) | 8000 |
-| [`rails/`](rails/) | **Ruby on Rails 8** (modo API) | **PostgreSQL** (SQL) | 3001 |
-
-Además, **[Voltec](frontend/)** es una tienda en **React** que consume cualquiera de las 3 APIs (se cambia en vivo):
+Además, **[Voltec](frontend/)** es una tienda en **React** que consume esta API:
 👉 **https://g2w1n-voltec.onrender.com**
 
-Una **única batería de 49 pruebas** ([`tests/contrato.test.js`](tests/contrato.test.js)) se ejecuta contra las tres
-y las tres la pasan. Así, la comparación entre frameworks se basa en código que hace exactamente lo mismo, no en opiniones.
+Una batería de **49 pruebas de contrato** ([`tests/contrato.test.js`](tests/contrato.test.js)) comprueba cada regla de la API
+en cada `push`.
 
 Trabajo de la asignatura *Desarrollo de Aplicaciones Web* — Unidad 3: Frameworks de desarrollo Frontend y Backend.
 
@@ -24,47 +19,38 @@ Trabajo de la asignatura *Desarrollo de Aplicaciones Web* — Unidad 3: Framewor
 
 | Característica | Qué problema real resuelve |
 |---|---|
-| **Protección contra sobreventa** | 20 clientes compran a la vez un producto con 5 unidades → se aprueban **exactamente 5**. Se usan transacciones y bloqueo de filas (SQL) o transacciones optimistas (Firestore). |
+| **Protección contra sobreventa** | 20 clientes compran a la vez un producto con 5 unidades → se aprueban **exactamente 5**. Se usan transacciones de Firestore con reintentos y una cola por producto. |
 | **Idempotencia** (`Idempotency-Key`) | Si el cliente hace doble clic o la red reenvía la petición, **no se crea un pedido duplicado** ni se descuenta dos veces el stock. |
 | **Kardex** | El stock **no se edita a mano**: solo cambia con movimientos (entrada/salida) que guardan el saldo resultante. Así siempre se sabe por qué cambió el stock. |
 | **Máquina de estados** | `pendiente → pagado → enviado → entregado`. No se puede saltar de *pagado* a *entregado* ni cancelar algo ya entregado. |
 | **Cancelación con devolución** | Cancelar un pedido devuelve el stock automáticamente y lo registra en el kardex. |
-| **Dinero exacto** | En JS `0.1 + 0.2 = 0.30000000000000004`. Aquí se usan céntimos enteros (Node) y `Decimal` / `BigDecimal` (Python/Ruby). |
+| **Dinero exacto** | En JS `0.1 + 0.2 = 0.30000000000000004`. Aquí se calcula con céntimos enteros. |
 | **Foto del pedido** | El pedido guarda nombre y precio al momento de la compra: si mañana sube el precio, los pedidos antiguos no cambian. |
 | **Borrado lógico** | Eliminar un producto lo oculta del catálogo, pero conserva el historial de pedidos y del kardex. |
 | **Roles con JWT** | `admin` gestiona catálogo, stock y estados; `cliente` compra y ve **solo sus** pedidos (un pedido ajeno responde 404, no 403, para no revelar que existe). |
-| **Errores uniformes** | Todas las APIs responden `{ "error": { "codigo", "mensaje", "detalles" } }` con el mismo código HTTP. |
-| **Benchmark** | Mide lecturas y pedidos concurrentes en las tres APIs con la misma carga ([`docs/benchmark.md`](docs/benchmark.md)). |
-| **Panel web** | Frontend en Firebase Hosting que funciona con **cualquiera** de las 3 APIs, con una demo de concurrencia en vivo. |
-| **CI** | GitHub Actions ejecuta las 49 pruebas contra las 3 APIs en cada `push` y compila el frontend. |
+| **Errores uniformes** | La API responde siempre `{ "error": { "codigo", "mensaje", "detalles" } }` con su código HTTP. |
+| **Benchmark** | Mide lecturas y pedidos concurrentes ([`docs/benchmark.md`](docs/benchmark.md)). |
+| **Panel web** | Panel de pruebas con una demo de concurrencia en vivo. |
+| **CI** | GitHub Actions ejecuta las 49 pruebas en cada `push` (con el emulador de Firestore) y compila el frontend. |
 | **Anti fuerza bruta** | 5 logins fallidos para un email desde la misma IP lo bloquean 15 min (`429` + `Retry-After`). Se guarda en la base de datos para que valga en todas las instancias. |
 | **Límite de peticiones** | Máximo `RATE_LIMIT_POR_MINUTO` (600 por defecto) peticiones por IP y minuto. |
 | **CORS restringido** | Solo Voltec, el panel, Firebase Hosting y `localhost` pueden llamar a la API desde un navegador. |
 | **Contraseñas fuertes** | Mayúscula, minúscula, número y símbolo; Voltec muestra un medidor en vivo. |
 | **Auditoría** | Cada cambio de producto, stock, estado de pedido y cada bloqueo de login queda registrado (quién, qué, antes/después, IP, cuándo) **en la misma transacción** que el cambio. `GET /auditoria`. |
-| **Swagger** | Documentación interactiva en `/docs` de cada API, generada desde un único [`shared/openapi.yaml`](shared/openapi.yaml). |
+| **Swagger** | Documentación interactiva en `/docs`, generada desde un único [`shared/openapi.yaml`](shared/openapi.yaml). |
 | **Imágenes** | Campo `imagen_url` validado (solo `http(s)` o rutas `/...`, nunca `javascript:`). |
 
 ## Arquitectura
 
 ```mermaid
 flowchart LR
-    P[Panel web<br/>Firebase Hosting] -->|HTTP + JWT| E
-    P --> D
-    P --> R
-    T[33 pruebas de contrato<br/>+ benchmark] --> E & D & R
-    subgraph Node.js
-      E[Express 5<br/>Cloud Functions] --> F[(Firestore<br/>NoSQL)]
-    end
-    subgraph Python
-      D[Django REST Framework] --> PG1[(PostgreSQL)]
-    end
-    subgraph Ruby
-      R[Rails 8 API] --> PG2[(PostgreSQL)]
-    end
+    V[Voltec<br/>React] -->|HTTP + JWT| E
+    P[Panel web] -->|HTTP + JWT| E
+    T[49 pruebas de contrato<br/>+ benchmark] --> E
+    E[Express 5<br/>Render / Cloud Functions] --> F[(Firestore<br/>NoSQL)]
 ```
 
-Las tres siguen la misma organización por capas: **rutas → validación → servicio (lógica de negocio) → base de datos**.
+Organización por capas: **rutas → validación (Zod) → servicio (lógica de negocio) → Firestore**.
 
 ### Modelo de datos
 
@@ -79,7 +65,7 @@ erDiagram
     PEDIDOS ||--o{ MOVIMIENTOS_STOCK : origina
 ```
 
-En **Firestore** (NoSQL) el modelo cambia: los items y el historial van **embebidos** dentro del documento del pedido,
+Como Firestore es NoSQL, los items y el historial van **embebidos** dentro del documento del pedido,
 y el nombre de la categoría se **desnormaliza** dentro del producto. Así se evitan los *joins*, que Firestore no tiene.
 
 ---
@@ -164,70 +150,48 @@ Sin stock suficiente → `409 Conflict`
 
 ## Cómo ejecutarlo
 
-**Requisitos:** Node.js 22, Java 21 (para el emulador de Firebase), Python 3.12+, Ruby 3.3 y PostgreSQL 16
-(o Docker para levantar PostgreSQL con `docker compose up -d`).
+**Requisitos:** Node.js 22 y Java 21 (para el emulador de Firebase).
 
 ```bash
 git clone https://github.com/G2w1n/apis.git && cd apis
-docker compose up -d          # PostgreSQL con las bases tienda_django y tienda_rails (opcional si ya tienes PostgreSQL)
-```
-
-### 1. Express + Firebase (puerto 3000)
-```bash
 npm install -g firebase-tools
 cd node-firebase/functions && npm install
 firebase emulators:start --only firestore --project demo-tienda   # en otra terminal; consola: http://localhost:4000
 export FIRESTORE_EMULATOR_HOST=127.0.0.1:8080
-npm run seed && npm start
+npm run seed && npm start                                         # API en http://localhost:3000/api/v1
 ```
 
-### 2. Django (puerto 8000)
-```bash
-cd django
-python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-python manage.py migrate && python manage.py seed
-python manage.py runserver 8000                     # panel admin en http://localhost:8000/admin/
-```
-
-### 3. Rails (puerto 3001)
-```bash
-cd rails
-bundle install
-bin/rails db:prepare db:seed
-bin/rails server -p 3001
-```
+Voltec en local: `cd frontend && npm install && npm run dev` (usa la API local de `localhost:3000`).
 
 ### Pruebas, benchmark y panel
 ```bash
-npm run test:express     # o test:django / test:rails  → 33 pruebas
-npm run benchmark        # compara las 3 APIs y actualiza docs/benchmark.md
-                         # (arranca las APIs con RATE_LIMIT_POR_MINUTO=100000 para que el límite no corte la medición)
+npm run test:express     # 49 pruebas de contrato
+npm run benchmark        # mide la API y actualiza docs/benchmark.md
+                         # (arranca la API con RATE_LIMIT_POR_MINUTO=100000 para que el límite no corte la medición)
 ```
 Para el panel, abre `node-firebase/public/index.html` (o `npm run emuladores` en `node-firebase/functions` y entra a http://localhost:5000),
-elige la API en el selector superior y entra como admin.
+y entra como admin.
 
 ### Publicar en la nube con Render (gratis)
-El archivo [`render.yaml`](render.yaml) crea todo de una vez: las 3 APIs, el panel y la base PostgreSQL.
+El archivo [`render.yaml`](render.yaml) crea todo de una vez: la API, el panel y Voltec.
 
 1. Entra a https://render.com y regístrate con tu cuenta de **GitHub**.
 2. **New → Blueprint** → elige el repositorio `G2w1n/apis` → **Apply**.
-3. Render te pedirá la variable `FIREBASE_SERVICE_ACCOUNT` de la API Express: en la consola de Firebase ve a
+3. Render te pedirá la variable `FIREBASE_SERVICE_ACCOUNT` de la API: en la consola de Firebase ve a
    ⚙️ Configuración del proyecto → **Cuentas de servicio → Generar nueva clave privada**, abre el archivo descargado
    y pega **todo su contenido**.
-4. Espera a que los 4 servicios queden en verde (el primer despliegue tarda unos minutos). Cada API carga sola los datos de ejemplo.
+4. Espera a que los 3 servicios queden en verde (el primer despliegue tarda unos minutos). La API carga sola los datos de ejemplo si Firestore está vacío.
 
 | Servicio | URL |
 |---|---|
 | **Voltec (tienda en React)** | https://g2w1n-voltec.onrender.com |
 | Panel web de pruebas | https://g2w1n-tienda-panel.onrender.com |
-| Express + Firestore | https://g2w1n-tienda-express.onrender.com/api/v1/productos |
-| Django + PostgreSQL | https://g2w1n-tienda-django.onrender.com/api/v1/productos · admin: `/admin/` |
-| Rails + PostgreSQL | https://g2w1n-tienda-rails.onrender.com/api/v1/productos |
+| API (Express + Firestore) | https://g2w1n-tienda-express.onrender.com/api/v1/productos |
+| Documentación Swagger | https://g2w1n-tienda-express.onrender.com/docs |
 
-> Si Render asigna otra URL (cuando el nombre ya está ocupado), actualízala en `BACKENDS` dentro de `node-firebase/public/index.html`.
+> Si Render asigna otra URL (cuando el nombre ya está ocupado), actualízala en `BACKENDS` dentro de `node-firebase/public/index.html` y `frontend/src/context/ApiContext.jsx`.
 > En el plan gratuito los servicios se "duermen" tras 15 min sin uso: la primera visita tarda ~1 min. Ábrelos unos minutos
-> antes de exponer. La base PostgreSQL gratuita de Render caduca a los 30 días.
+> antes de exponer.
 
 ### Desplegar en Firebase (proyecto `probandoapi-8c9b8`)
 El repositorio ya apunta al proyecto `probandoapi-8c9b8` (`node-firebase/.firebaserc`). Cloud Functions y Firestore usan la
@@ -258,38 +222,29 @@ con `functions/serviceAccount.json` presente y **sin** la variable `FIRESTORE_EM
 
 ---
 
-## Comparativa basada en este proyecto
+## Decisiones técnicas
 
-| | Express + Firestore | Django + PostgreSQL | Rails + PostgreSQL |
-|---|---|---|---|
-| Lenguaje | JavaScript | Python | Ruby |
-| Estilo | Minimalista: eliges cada pieza | "Baterías incluidas" | "Convención sobre configuración" |
-| Líneas de código* | ~670 | ~780 (incluye panel admin) | ~620 |
-| Validación | Zod (esquemas) | Serializers de DRF | Validador propio (Rails convierte `1.5` → `1` sin avisar) |
-| Acceso a datos | SDK de Firestore (documentos) | ORM de Django | Active Record |
-| Migraciones | No aplica (sin esquema) | Automáticas (`makemigrations`) | Migraciones en Ruby |
-| Anti-sobreventa | Transacción optimista + reintentos + cola por producto | `select_for_update()` + `CHECK (stock >= 0)` | `.lock` (FOR UPDATE) + `CHECK (stock >= 0)` |
-| Filtros y búsqueda | En memoria (Firestore no tiene `LIKE` ni varios rangos por consulta) | SQL (`ILIKE`, `WHERE`, `ORDER BY`) | SQL (`ILIKE`, `WHERE`, `ORDER BY`) |
-| Reportes | Recorre documentos en el código | Agregaciones SQL (`SUM`, `GROUP BY`) | Agregaciones SQL |
-| Extra gratis | Hosting + despliegue serverless | Panel `/admin/` sin escribir frontend | Generadores y convenciones |
-| Lecturas (req/s) | 268 | 684 | 416 |
-| Pedidos concurrentes (req/s) | 154 | 149 | 101 |
+| | Express + Firestore |
+|---|---|
+| Lenguaje | JavaScript (Node.js 22) |
+| Estilo | Minimalista: se elige cada pieza (Zod, helmet, express-rate-limit, JWT) |
+| Validación | Zod (esquemas) |
+| Acceso a datos | SDK de Firebase Admin (documentos) |
+| Anti-sobreventa | Transacción optimista + reintentos + cola por producto |
+| Filtros y búsqueda | En memoria (Firestore no tiene `LIKE` ni varios rangos por consulta) |
+| Despliegue | Render (gratis) o Cloud Functions + Hosting de Firebase |
 
-\* Sin contar líneas vacías ni comentarios. Rendimiento medido en la misma máquina con [`tests/benchmark.js`](tests/benchmark.js)
-(Firestore en emulador local); ver [`docs/benchmark.md`](docs/benchmark.md).
+Rendimiento medido con [`tests/benchmark.js`](tests/benchmark.js) (Firestore en emulador local); ver [`docs/benchmark.md`](docs/benchmark.md).
 
 ### Lecciones aprendidas
-1. **SQL vs NoSQL para inventario.** PostgreSQL resuelve la concurrencia bloqueando la fila: la segunda compra espera.
-   Firestore usa transacciones optimistas: si dos chocan, una se reintenta. Con 20 compras simultáneas del **mismo**
-   producto (un "documento caliente"), la primera versión en Firestore bajó a **2 pedidos/s con p95 de 73 s**.
+1. **Concurrencia en NoSQL.** Firestore usa transacciones optimistas: si dos compras chocan, una se reintenta. Con 20 compras
+   simultáneas del **mismo** producto (un "documento caliente"), la primera versión bajó a **2 pedidos/s con p95 de 73 s**.
    Al encolar en la API las operaciones sobre el mismo producto subió a **~150 pedidos/s**, sin perder la garantía de la
-   transacción. En los tres casos el stock final fue exacto.
+   transacción, y el stock final fue exacto.
 2. **Firestore no es una base de datos relacional.** No hay `JOIN`, `LIKE` ni `UNIQUE`. Se reemplazaron con
    desnormalización, filtros en memoria y documentos "candado" (`_unicos/sku:LAP-001`) creados dentro de la transacción.
-3. **El framework importa menos que el diseño.** Las tres APIs pasan las mismas 33 pruebas. Lo que evita errores graves
-   (sobreventa, cobros duplicados, totales mal redondeados) son las decisiones de diseño, no el lenguaje.
-4. **Cada framework brilla en algo:** Express + Firebase en despliegue y escalado sin servidores; Django en tener panel
-   de administración y ORM listos; Rails en lo poco que hay que escribir gracias a sus convenciones.
+3. **El diseño importa más que la herramienta.** Lo que evita errores graves (sobreventa, cobros duplicados, totales mal
+   redondeados) son decisiones de diseño: transacciones, idempotencia, kardex y céntimos enteros.
 
 ---
 
@@ -298,23 +253,20 @@ con `functions/serviceAccount.json` presente y **sin** la variable `FIRESTORE_EM
 ```
 apis/
 ├── frontend/               Voltec: tienda en React + Vite + Tailwind
-├── node-firebase/          Express + Firestore (Cloud Functions) y panel web (public/)
-├── django/                 Django + DRF + PostgreSQL
-├── rails/                  Rails 8 API + PostgreSQL
-├── shared/seed.json        Mismos datos de ejemplo para las 3 APIs
+├── node-firebase/          API Express + Firestore (functions/) y panel web (public/)
+├── shared/                 seed.json (datos de ejemplo), openapi.yaml (Swagger), envios.json
 ├── tests/
-│   ├── contrato.test.js    33 pruebas que deben pasar las 3 APIs
-│   └── benchmark.js        Comparación de rendimiento
+│   ├── contrato.test.js    49 pruebas de contrato
+│   └── benchmark.js        Medición de rendimiento
 ├── docs/benchmark.md       Últimos resultados
-├── docker-compose.yml      PostgreSQL para Django y Rails
 └── .github/workflows/      CI: pruebas de contrato en cada push
 ```
 
 ## Guion sugerido para la demo (≈5 min)
-1. **Panel → Catálogo:** cambiar entre Express, Django y Rails en el selector. Los mismos datos y el mismo comportamiento.
+1. **Voltec → Catálogo:** buscar con Ctrl+K, filtrar y comparar productos.
 2. **Comprar** dos productos; hacer doble clic en *Confirmar* → la respuesta dice "ya registrado" (idempotencia).
 3. Intentar comprar más de lo que hay → error `STOCK_INSUFICIENTE` con el detalle.
 4. **Pedidos:** marcar pagado → enviado → entregado; intentar cancelar un pedido entregado → no se permite.
 5. **Stock y kardex:** ver cómo cada venta y cada cancelación quedan registradas con su saldo.
 6. **⚡ Demo concurrencia:** 20 compras simultáneas con stock 5 → 5 verdes y 15 rojas, stock final 0.
-7. Mostrar **GitHub Actions** en verde: las 3 APIs pasan las mismas pruebas.
+7. Mostrar **GitHub Actions** en verde: las 49 pruebas pasan en cada `push`.

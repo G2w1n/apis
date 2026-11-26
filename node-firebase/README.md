@@ -16,7 +16,7 @@ functions/
 │   ├── middleware/       JWT, roles, validación, errores
 │   └── utils/            Dinero en céntimos, paginación, cola por producto
 └── scripts/seed.js       Carga ../shared/seed.json
-public/index.html         Panel web (funciona con las 3 APIs)
+public/index.html         Panel web de pruebas
 firestore.rules           Acceso directo desde el navegador bloqueado: todo pasa por la API
 ```
 

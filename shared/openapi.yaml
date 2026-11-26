@@ -3,11 +3,11 @@ info:
   title: Tienda API — productos, pedidos y stock
   version: 1.0.0
   description: |
-    Misma API implementada en **Express + Firestore**, **Django + PostgreSQL** y **Ruby on Rails + PostgreSQL**.
-    Las tres cumplen este contrato y pasan las mismas pruebas (`tests/contrato.test.js`).
+    API implementada con **Node.js + Express + Firebase Firestore**.
+    Cumple este contrato y pasa las pruebas de `tests/contrato.test.js`.
 
     **Cómo probar:** usa `POST /auth/login` con `admin@tienda.pe` / `Admin123*`, copia el `token`,
-    pulsa **Authorize** y pégalo. Los IDs son números en Django/Rails y texto en Firestore.
+    pulsa **Authorize** y pégalo. Los IDs son textos generados por Firestore.
 
     **Seguridad:** 5 logins fallidos bloquean ese email 15 min (429), hay un límite de peticiones por IP (429)
     y CORS solo acepta orígenes conocidos.

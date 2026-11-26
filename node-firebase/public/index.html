@@ -182,12 +182,8 @@ const EN_FIREBASE = /\.(web\.app|firebaseapp\.com)$/.test(location.hostname) || 
 const BACKENDS = [
   ...(EN_FIREBASE ? [{ nombre: 'Este servidor (Firebase)', url: `${location.origin}/api/v1` }] : []),
   { nombre: 'Express + Firestore (Render)', url: 'https://g2w1n-tienda-express.onrender.com/api/v1' },
-  { nombre: 'Django + PostgreSQL (Render)', url: 'https://g2w1n-tienda-django.onrender.com/api/v1' },
-  { nombre: 'Rails + PostgreSQL (Render)', url: 'https://g2w1n-tienda-rails.onrender.com/api/v1' },
   ...(EN_LA_NUBE ? [] : [
     { nombre: 'Express + Firestore (local)', url: 'http://localhost:3000/api/v1' },
-    { nombre: 'Django + PostgreSQL (local)', url: 'http://localhost:8000/api/v1' },
-    { nombre: 'Rails + PostgreSQL (local)', url: 'http://localhost:3001/api/v1' },
   ]),
 ];
 const leer = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };

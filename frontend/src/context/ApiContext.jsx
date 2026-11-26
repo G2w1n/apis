@@ -1,16 +1,12 @@
 import { createContext, useContext, useMemo, useState } from 'react';
 import { leer, guardar } from '../utils/almacen.js';
 
-// Las 3 APIs publicadas en Render cumplen el mismo contrato: se puede cambiar entre ellas en vivo
+// API de la tienda (Express + Firebase en Render). En desarrollo también se puede usar la API local.
 export const BACKENDS = [
   { id: 'express', nombre: 'Express + Firebase', base: 'https://g2w1n-tienda-express.onrender.com/api/v1', color: 'bg-emerald-400' },
-  { id: 'django', nombre: 'Django + PostgreSQL', base: 'https://g2w1n-tienda-django.onrender.com/api/v1', color: 'bg-sky-400' },
-  { id: 'rails', nombre: 'Rails + PostgreSQL', base: 'https://g2w1n-tienda-rails.onrender.com/api/v1', color: 'bg-red-400' },
 ];
 const LOCALES = [
   { id: 'express-local', nombre: 'Express (local)', base: 'http://localhost:3000/api/v1', color: 'bg-emerald-400' },
-  { id: 'django-local', nombre: 'Django (local)', base: 'http://localhost:8000/api/v1', color: 'bg-sky-400' },
-  { id: 'rails-local', nombre: 'Rails (local)', base: 'http://localhost:3001/api/v1', color: 'bg-red-400' },
 ];
 const EN_DESARROLLO = ['localhost', '127.0.0.1'].includes(window.location.hostname);
 export const OPCIONES = EN_DESARROLLO ? [...LOCALES, ...BACKENDS] : BACKENDS;

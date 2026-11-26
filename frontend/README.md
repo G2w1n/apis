@@ -1,7 +1,7 @@
 # Voltec · Frontend en React
 
-Tienda de tecnología que consume la API del proyecto. Funciona con **cualquiera de las 3 APIs**
-(Express + Firebase, Django o Rails) y se puede cambiar entre ellas en vivo desde el selector de la barra superior.
+Tienda de tecnología que consume la API del proyecto. La API es **Express + Firebase**
+(publicada en Render); el indicador de la barra superior muestra si está en línea.
 
 **Stack:** React 18 · Vite · Tailwind CSS · React Router · TanStack Query · Recharts · lucide-react
 · **Framer Motion** (animaciones) · **Radix UI** (menús y ventanas accesibles) · **cmdk** (paleta Ctrl+K)
@@ -75,7 +75,7 @@ src/
 
 ## Seguridad en el navegador
 Render envía cabeceras definidas en `render.yaml`:
-- **Content-Security-Policy:** solo scripts propios; conexiones solo a las 3 APIs y a Google Fonts; sin iframes (`frame-ancestors 'none'`).
+- **Content-Security-Policy:** solo scripts propios; conexiones solo a la API y a Google Fonts; sin iframes (`frame-ancestors 'none'`).
 - `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `Permissions-Policy` y HSTS.
 - Por eso el script del tema (`public/tema.js`) es un archivo y no código inline.
 

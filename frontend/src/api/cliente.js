@@ -1,4 +1,4 @@
-// Cliente HTTP de la API. Todas las APIs (Express, Django, Rails) cumplen el mismo contrato,
+// Cliente HTTP de la API. La API (Express + Firebase) sigue el contrato de shared/openapi.yaml,
 // así que este archivo funciona igual con cualquiera de ellas.
 
 export class ApiError extends Error {

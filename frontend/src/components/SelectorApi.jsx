@@ -2,7 +2,7 @@ import { Server } from 'lucide-react';
 import { OPCIONES, useBackend } from '../context/ApiContext.jsx';
 import { useSalud } from '../api/consultas.js';
 
-// Permite cambiar en vivo entre Express, Django y Rails: la tienda funciona igual con las tres
+// Muestra el estado de la API; si hay más de una opción (desarrollo: local o Render) permite cambiarla
 export default function SelectorApi({ compacto = false }) {
   const { backend, cambiarBackend } = useBackend();
   const salud = useSalud();
@@ -12,14 +12,14 @@ export default function SelectorApi({ compacto = false }) {
       <span className={`h-2 w-2 shrink-0 rounded-full ${estado}`} title={salud.isSuccess ? 'API en línea' : salud.isError ? 'Sin conexión' : 'Conectando…'} />
       {!compacto && <Server className="h-3.5 w-3.5 text-slate-500" aria-hidden />}
       <span className="sr-only">API</span>
-      <select
+      {OPCIONES.length === 1 ? <span className="font-medium text-slate-200">{backend.nombre}</span> : <select
         className="cursor-pointer bg-transparent font-medium text-slate-200 outline-none"
         value={backend.id}
         // La caché de React Query ya separa los datos por API (backend.id va en cada queryKey)
         onChange={(e) => cambiarBackend(e.target.value)}
       >
         {OPCIONES.map((o) => <option key={o.id} value={o.id} className="bg-panel">{o.nombre}</option>)}
-      </select>
+      </select>}
     </label>
   );
 }

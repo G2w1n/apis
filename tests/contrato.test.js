@@ -1,5 +1,5 @@
 /*
- * Pruebas de CONTRATO: las 3 APIs (Express, Django, Rails) deben pasar exactamente estas pruebas.
+ * Pruebas de CONTRATO: la API (Express + Firebase) debe pasar exactamente estas pruebas.
  *   BASE_URL=http://localhost:3000/api/v1 node --test tests/
  * Requiere haber ejecutado el seed (usuario admin@tienda.pe).
  */

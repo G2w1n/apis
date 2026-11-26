@@ -2,7 +2,7 @@
   "name": "voltec-frontend",
   "private": true,
   "version": "1.0.0",
-  "description": "Voltec: tienda de tecnología en React que consume la API (Express, Django o Rails)",
+  "description": "Voltec: tienda de tecnología en React que consume la API Express + Firebase",
   "type": "module",
   "scripts": {
     "dev": "vite",

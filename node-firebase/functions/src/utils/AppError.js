@@ -1,4 +1,4 @@
-// Error de negocio con código HTTP y código legible (mismo formato en las 3 APIs)
+// Error de negocio con código HTTP y código legible
 export class AppError extends Error {
   constructor(status, codigo, mensaje, detalles, cabeceras) {
     super(mensaje);

@@ -1,4 +1,4 @@
-// Sirve la documentación Swagger compartida por las 3 APIs (../../../shared)
+// Sirve la documentación Swagger (../../../shared/openapi.yaml)
 import { existsSync, readFileSync } from 'node:fs';
 
 function leer(nombre) {

@@ -1,5 +1,5 @@
 /*
- * Benchmark comparativo: misma carga contra las 3 APIs.
+ * Benchmark: lecturas y pedidos concurrentes contra la API.
  *   node tests/benchmark.js                      (las 3, puertos por defecto)
  *   node tests/benchmark.js express=http://localhost:3000/api/v1
  * Genera docs/benchmark.md con la tabla de resultados.
@@ -10,8 +10,6 @@ import { writeFile, mkdir } from 'node:fs/promises';
 const args = Object.fromEntries(process.argv.slice(2).map((a) => a.split('=')));
 const OBJETIVOS = Object.keys(args).length ? args : {
   'Express + Firestore': 'http://localhost:3000/api/v1',
-  'Django + PostgreSQL': 'http://localhost:8000/api/v1',
-  'Rails + PostgreSQL': 'http://localhost:3001/api/v1',
 };
 const LECTURAS = Number(process.env.LECTURAS) || 2000;
 const ESCRITURAS = Number(process.env.ESCRITURAS) || 300;
@@ -98,8 +96,7 @@ ${resultados.map(fila).join('\n')}
 - **Pedidos**: \`POST /pedidos\` concurrentes sobre el MISMO producto (peor caso: todos compiten por la misma fila/documento).
 - **Stock consistente**: al terminar, el stock coincide exactamente con los pedidos aprobados.
 
-> Los números dependen de la máquina. Express corre como 1 proceso, Django con Gunicorn (4 workers × 4 hilos)
-> y Rails con Puma (2 workers × 5 hilos). Firestore corre en el **emulador local**, que es más lento que
+> Los números dependen de la máquina. Express corre como 1 proceso. Firestore corre en el **emulador local**, que es más lento que
 > Firestore real en la nube; úsalo para comparar tendencias, no como cifra absoluta.
 `;
 await mkdir(new URL('../docs/', import.meta.url), { recursive: true });

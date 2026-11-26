@@ -2,11 +2,9 @@
   "name": "tienda-apis-comparativa",
   "private": true,
   "type": "module",
-  "description": "Pruebas de contrato y benchmark compartidos por las 3 APIs",
+  "description": "Pruebas de contrato y benchmark de la API Express + Firebase",
   "scripts": {
     "test:express": "BASE_URL=http://localhost:3000/api/v1 node --test tests/contrato.test.js",
-    "test:django": "BASE_URL=http://localhost:8000/api/v1 node --test tests/contrato.test.js",
-    "test:rails": "BASE_URL=http://localhost:3001/api/v1 node --test tests/contrato.test.js",
     "benchmark": "node tests/benchmark.js"
   },
   "engines": { "node": ">=20" }
