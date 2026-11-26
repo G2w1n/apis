@@ -172,6 +172,13 @@ npm run benchmark        # mide la API y actualiza docs/benchmark.md
 Para el panel, abre `node-firebase/public/index.html` (o `npm run emuladores` en `node-firebase/functions` y entra a http://localhost:5000),
 y entra como admin.
 
+### Probar con Postman
+En [`postman/`](postman/) está la colección con los 31 endpoints de ejemplo (con pruebas automáticas) y dos entornos:
+1. En Postman: **Import** → arrastra los 3 archivos de la carpeta `postman/`.
+2. Arriba a la derecha elige el entorno **Voltec — Render** (nube) o **Voltec — Local**.
+3. Ejecuta **Auth → Login admin** y **Login cliente** (guardan los tokens solos) y luego **Productos → Listar productos**.
+4. O usa **Run collection** para correr todo en orden.
+
 ### Publicar en la nube con Render (gratis)
 El archivo [`render.yaml`](render.yaml) crea todo de una vez: la API, el panel y Voltec.
 
@@ -255,6 +262,7 @@ apis/
 ├── frontend/               Voltec: tienda en React + Vite + Tailwind
 ├── node-firebase/          API Express + Firestore (functions/) y panel web (public/)
 ├── shared/                 seed.json (datos de ejemplo), openapi.yaml (Swagger), envios.json
+├── postman/               Colección y entornos de Postman
 ├── tests/
 │   ├── contrato.test.js    49 pruebas de contrato
 │   └── benchmark.js        Medición de rendimiento
