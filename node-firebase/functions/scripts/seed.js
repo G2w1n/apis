@@ -11,7 +11,20 @@ const seed = JSON.parse(await readFile(new URL('../../../shared/seed.json', impo
 
 // --si-vacio: no toca nada si ya hay usuarios (para ejecutarlo en cada arranque en la nube)
 if (process.argv.includes('--si-vacio') && !(await col.usuarios.limit(1).get()).empty) {
-  // Base ya cargada: solo se asignan las imágenes de ejemplo a los productos que aún no tienen una
+  // Base ya cargada: no se borra nada. Solo se agregan los productos nuevos del seed (por SKU)
+  // y se asignan las imágenes de ejemplo a los productos que aún no tienen una
+  const admin = (await col.usuarios.where('email', '==', 'admin@tienda.pe').limit(1).get()).docs[0];
+  let agregados = 0;
+  if (admin) {
+    const cats = {};
+    for (const d of (await col.categorias.get()).docs) cats[d.data().nombre] = d.id;
+    for (const { categoria, ...p } of seed.productos) {
+      if (!(await col.productos.where('sku', '==', p.sku).limit(1).get()).empty) continue;
+      cats[categoria] ??= (await categorias.crear(seed.categorias.find((c) => c.nombre === categoria) ?? { nombre: categoria }, { id: admin.id })).id;
+      await productos.crear({ ...p, categoria_id: cats[categoria] }, { id: admin.id });
+      agregados++;
+    }
+  }
   let asignadas = 0;
   for (const { sku, imagen_url: imagen } of seed.productos) {
     if (!imagen) continue;
@@ -21,7 +34,7 @@ if (process.argv.includes('--si-vacio') && !(await col.usuarios.limit(1).get()).
       asignadas++;
     }
   }
-  console.log(`Firestore ya tiene datos: no se ejecuta el seed (imágenes asignadas: ${asignadas})`);
+  console.log(`Firestore ya tiene datos: no se ejecuta el seed (productos nuevos: ${agregados}, imágenes asignadas: ${asignadas})`);
   process.exit(0);
 }
 
