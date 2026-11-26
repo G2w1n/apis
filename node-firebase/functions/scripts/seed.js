@@ -11,7 +11,17 @@ const seed = JSON.parse(await readFile(new URL('../../../shared/seed.json', impo
 
 // --si-vacio: no toca nada si ya hay usuarios (para ejecutarlo en cada arranque en la nube)
 if (process.argv.includes('--si-vacio') && !(await col.usuarios.limit(1).get()).empty) {
-  console.log('Firestore ya tiene datos: no se ejecuta el seed');
+  // Base ya cargada: solo se asignan las imágenes de ejemplo a los productos que aún no tienen una
+  let asignadas = 0;
+  for (const { sku, imagen_url: imagen } of seed.productos) {
+    if (!imagen) continue;
+    const snap = await col.productos.where('sku', '==', sku).get();
+    for (const doc of snap.docs.filter((d) => !d.data().imagen_url)) {
+      await doc.ref.update({ imagen_url: imagen });
+      asignadas++;
+    }
+  }
+  console.log(`Firestore ya tiene datos: no se ejecuta el seed (imágenes asignadas: ${asignadas})`);
   process.exit(0);
 }
 

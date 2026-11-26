@@ -19,10 +19,14 @@ class Command(BaseCommand):
 
     @transaction.atomic
     def handle(self, *args, **options):
-        if options['si_vacio'] and Usuario.objects.exists():
-            self.stdout.write('La base ya tiene datos: no se ejecuta el seed')
-            return
         seed = json.loads((Path(settings.BASE_DIR).parent / 'shared' / 'seed.json').read_text(encoding='utf-8'))
+        if options['si_vacio'] and Usuario.objects.exists():
+            # Base ya cargada: solo se asignan las imágenes de ejemplo a los productos que aún no tienen una
+            asignadas = sum(
+                Producto.objects.filter(sku=p['sku'], imagen_url__isnull=True).update(imagen_url=p['imagen_url'])
+                for p in seed['productos'] if p.get('imagen_url'))
+            self.stdout.write(f'La base ya tiene datos: no se ejecuta el seed (imágenes asignadas: {asignadas})')
+            return
         for modelo in (MovimientoStock, DetallePedido, HistorialEstado, Pedido, Producto, Categoria, Usuario):
             modelo.objects.all().delete()
 
